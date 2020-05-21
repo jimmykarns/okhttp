@@ -16,10 +16,10 @@
 package okhttp.android.test.compare;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import okhttp3.CertificatePinner
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -30,15 +30,23 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class OkHttpClientTest {
-  private var client = OkHttpClient()
+  val pinner = CertificatePinner.Builder()
+      .add(
+          "google.com",
+          "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      )
+      .build()
+
+  val client = OkHttpClient.Builder()
+      .certificatePinner(pinner)
+      .build()
 
   @Test fun get() {
     val request = Request.Builder()
         .url("https://google.com/robots.txt")
         .build()
     client.newCall(request).execute().use { response ->
-      assertThat(response.code).isEqualTo(200)
-      assertThat(response.protocol).isEqualTo(Protocol.HTTP_2)
+      println(response.code())
     }
   }
 }

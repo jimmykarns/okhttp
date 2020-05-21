@@ -38,20 +38,8 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${versions.kotlin}"
   implementation "org.jetbrains.kotlin:kotlin-reflect:${versions.kotlin}"
   implementation 'com.google.android.gms:play-services-safetynet:17.0.0'
-  implementation project(':okhttp')
+  implementation 'com.squareup.okhttp3:okhttp:3.11.0'
   testImplementation 'junit:junit:4.13'
-  androidTestImplementation(project(':okhttp-testing-support')) {
-    exclude group: 'org.openjsse', module: 'openjsse'
-    exclude group: 'org.conscrypt', module: 'conscrypt-openjdk-uber'
-    exclude group: 'software.amazon.cryptools', module: 'AmazonCorrettoCryptoProvider'
-  }
-  androidTestImplementation "org.bouncycastle:bcprov-jdk15on:${versions.bouncycastle}"
-  androidTestImplementation "org.bouncycastle:bctls-jdk15on:${versions.bouncycastle}"
-  androidTestImplementation "org.conscrypt:conscrypt-android:2.4.0"
-  androidTestImplementation project(':mockwebserver')
-  androidTestImplementation project(':okhttp-tls')
-  androidTestImplementation project(':okhttp-dnsoverhttps')
-  androidTestImplementation project(':okhttp-logging-interceptor')
   androidTestImplementation 'androidx.test.ext:junit:1.1.1'
   androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
   androidTestImplementation 'org.apache.httpcomponents.client5:httpclient5:5.0'
