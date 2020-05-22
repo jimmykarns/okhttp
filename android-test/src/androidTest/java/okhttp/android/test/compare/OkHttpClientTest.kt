@@ -20,8 +20,10 @@ import okhttp3.CertificatePinner
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
+import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
+import javax.net.ssl.SSLPeerUnverifiedException
 
 /**
  * OkHttp.
@@ -33,6 +35,10 @@ class OkHttpClientTest {
   val pinner = CertificatePinner.Builder()
       .add(
           "google.com",
+          "sha256/iie1VXtL7HzAMF+/PVPR9xzT80kQxdZeJ+zduCB3uj0="
+      )
+      .add(
+          "facebook.com",
           "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
       )
       .build()
@@ -41,12 +47,29 @@ class OkHttpClientTest {
       .certificatePinner(pinner)
       .build()
 
-  @Test fun get() {
+  @Test fun certificatePinningWorks() {
     val request = Request.Builder()
         .url("https://google.com/robots.txt")
         .build()
     client.newCall(request).execute().use { response ->
       println(response.code())
+    }
+  }
+
+  @Test fun certificatePinningFails() {
+    val request = Request.Builder()
+        .url("https://facebook.com/robots.txt")
+        .build()
+    try {
+      client.newCall(request)
+          .execute()
+          .use { response ->
+            println(response.code())
+          }
+
+      fail()
+    } catch (spe: SSLPeerUnverifiedException) {
+      // expected
     }
   }
 }

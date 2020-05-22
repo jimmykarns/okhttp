@@ -15,11 +15,14 @@
  */
 package okhttp.android.test.compare;
 
+import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.apache.hc.client5.http.classic.methods.HttpGet
 import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.apache.hc.core5.http.HttpVersion
 import org.junit.After
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -31,6 +34,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ApacheHttpClientTest {
   private var httpClient = HttpClients.createDefault()
+
+  @Before fun setUp() {
+    assumeTrue(Build.VERSION.SDK_INT > 21)
+  }
 
   @After fun tearDown() {
     httpClient.close()
