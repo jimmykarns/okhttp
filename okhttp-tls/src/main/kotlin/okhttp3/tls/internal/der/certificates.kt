@@ -16,12 +16,63 @@
 package okhttp3.tls.internal.der
 
 import java.math.BigInteger
+import java.security.KeyFactory
+import java.security.PublicKey
+import java.security.Signature
+import java.security.SignatureException
+import java.security.spec.X509EncodedKeySpec
 
 internal data class Certificate(
   val tbsCertificate: TbsCertificate,
   val signatureAlgorithm: AlgorithmIdentifier,
   val signatureValue: BitString
-)
+) {
+  val commonName: Any?
+    get() {
+      return tbsCertificate.subject
+          .flatten()
+          .firstOrNull { it.type == ObjectIdentifiers.commonName }
+          ?.value
+    }
+
+  val organizationalUnitName: Any?
+    get() {
+      return tbsCertificate.subject
+          .flatten()
+          .firstOrNull { it.type == ObjectIdentifiers.organizationalUnitName }
+          ?.value
+    }
+
+  val subjectAlternativeNames: Extension
+    get() {
+      return tbsCertificate.extensions.first {
+        it.extnID == ObjectIdentifiers.subjectAlternativeName
+      }
+    }
+
+  val basicConstraints: Extension
+    get() {
+      return tbsCertificate.extensions.first {
+        it.extnID == ObjectIdentifiers.basicConstraints
+      }
+    }
+
+  /**
+   * Returns true if the certificate was signed by [issuerPublicKey].
+   */
+  @Throws(SignatureException::class)
+  fun checkSignature(issuerPublicKey: PublicKey): Boolean {
+    val keyFactory = KeyFactory.getInstance("RSA")
+    val issuerKeySpec = X509EncodedKeySpec(issuerPublicKey.encoded, "RSA")
+
+    val data = CertificateAdapters.tbsCertificate.toDer(tbsCertificate)
+
+    val signature = Signature.getInstance("RSA")
+    signature.initVerify(keyFactory.generatePublic(issuerKeySpec))
+    signature.update(data.toByteArray())
+    return signature.verify(signatureValue.byteString.toByteArray())
+  }
+}
 
 internal data class TbsCertificate(
   /** Version ::= INTEGER { v1(0), v2(1), v3(2) } */
