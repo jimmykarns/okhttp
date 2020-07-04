@@ -15,9 +15,9 @@
  */
 package okhttp3.tls.internal.der
 
-import java.math.BigInteger
 import okio.ByteString
 import okio.IOException
+import java.math.BigInteger
 
 /**
  * ASN.1 adapters adapted from the specifications in [RFC 5280][rfc_5280].
@@ -206,6 +206,7 @@ internal object CertificateAdapters {
     when (typeHint) {
       ObjectIdentifiers.subjectAlternativeName -> subjectAlternativeName
       ObjectIdentifiers.basicConstraints -> basicConstraints
+      AttestationAdapters.KEY_DESCRIPTION_OID -> AttestationAdapters.keyDescription
       else -> null
     }
   }.withExplicitBox(
