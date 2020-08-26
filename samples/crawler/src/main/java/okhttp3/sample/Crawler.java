@@ -127,7 +127,7 @@ public final class Crawler {
       return;
     }
 
-    int threadCount = 20;
+    int threadCount = 128;
     long cacheByteCount = 1024L * 1024L * 100L;
 
     Cache cache = new Cache(new File(args[0]), cacheByteCount);
