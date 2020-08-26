@@ -87,10 +87,7 @@ class RealCall(
 
   var connection: RealConnection? = null
     private set
-  private var exchangeRequestDone = false
-  private var exchangeResponseDone = false
   private var timeoutEarlyExit = false
-  private var noMoreExchanges = false
 
   /**
    * This is the same value as [exchange], but scoped to the execution of the network interceptors.
@@ -99,6 +96,18 @@ class RealCall(
    */
   internal var interceptorScopedExchange: Exchange? = null
     private set
+
+  // These properties are guarded by this. They are typically only accessed by the thread executing
+  // the call, but they may be accessed by other threads for duplex requests.
+
+  /** True if this call still has a request body open. */
+  private var requestBodyOpen = false
+
+  /** True if this call still has a response body open. */
+  private var responseBodyOpen = false
+
+  /** True if there are more exchanges expected for this call. */
+  private var expectMoreExchanges = true
 
   // These properties are accessed by canceling threads. Any thread can cancel a call, and once it's
   // canceled it's canceled forever.
@@ -215,9 +224,13 @@ class RealCall(
    */
   fun enterNetworkInterceptorExchange(request: Request, newExchangeFinder: Boolean) {
     check(interceptorScopedExchange == null)
-    check(exchange == null) {
-      "cannot make a new request because the previous response is still open: " +
-          "please call response.close()"
+
+    synchronized(this) {
+      check(!responseBodyOpen) {
+        "cannot make a new request because the previous response is still open: " +
+            "please call response.close()"
+      }
+      check(!requestBodyOpen)
     }
 
     if (newExchangeFinder) {
@@ -232,16 +245,21 @@ class RealCall(
 
   /** Finds a new or pooled connection to carry a forthcoming request and response. */
   internal fun initExchange(chain: RealInterceptorChain): Exchange {
-    check(!noMoreExchanges) { "released" }
-    check(exchange == null)
+    synchronized(this) {
+      check(expectMoreExchanges) { "released" }
+      check(!responseBodyOpen)
+      check(!requestBodyOpen)
+    }
 
     val exchangeFinder = this.exchangeFinder!!
     val codec = exchangeFinder.find(client, chain)
     val result = Exchange(this, eventListener, exchangeFinder, codec)
     this.interceptorScopedExchange = result
     this.exchange = result
-    this.exchangeRequestDone = false
-    this.exchangeResponseDone = false
+    synchronized(this) {
+      this.requestBodyOpen = true
+      this.responseBodyOpen = true
+    }
 
     if (canceled) throw IOException("Canceled")
     return result
@@ -269,51 +287,67 @@ class RealCall(
     responseDone: Boolean,
     e: E
   ): E {
-    var result = e
-    if (exchange != this.exchange) {
-      return result // This exchange was detached violently!
+    if (exchange != this.exchange) return e // This exchange was detached violently!
+
+    var bothStreamsDone = false
+    var callDone = false
+    synchronized(this) {
+      if (requestDone && requestBodyOpen || responseDone && responseBodyOpen) {
+        if (requestDone) requestBodyOpen = false
+        if (responseDone) responseBodyOpen = false
+        bothStreamsDone = !requestBodyOpen && !responseBodyOpen
+        callDone = !requestBodyOpen && !responseBodyOpen && !expectMoreExchanges
+      }
     }
-    var changed = false
-    if (requestDone) {
-      if (!exchangeRequestDone) changed = true
-      this.exchangeRequestDone = true
-    }
-    if (responseDone) {
-      if (!exchangeResponseDone) changed = true
-      this.exchangeResponseDone = true
-    }
-    if (exchangeRequestDone && exchangeResponseDone && changed) {
+
+    if (bothStreamsDone) {
       this.exchange = null
-      result = maybeReleaseConnection(result, incrementSuccesses = true)
+      this.connection?.incrementSuccessCount()
     }
-    return result
+
+    if (callDone) {
+      return callDone(e)
+    }
+
+    return e
   }
 
   internal fun noMoreExchanges(e: IOException?): IOException? {
-    noMoreExchanges = true
-    return maybeReleaseConnection(e, incrementSuccesses = false)
+    var callDone = false
+    synchronized(this) {
+      if (expectMoreExchanges) {
+        expectMoreExchanges = false
+        callDone = !requestBodyOpen && !responseBodyOpen
+      }
+    }
+
+    if (callDone) {
+      return callDone(e)
+    }
+
+    return e
   }
 
   /**
-   * Release the connection if it is no longer needed. This is called after each exchange completes
-   * and after the call signals that no more exchanges are expected.
+   * Complete this call. This should be called once these properties are all false:
+   * [requestBodyOpen], [responseBodyOpen], and [expectMoreExchanges].
+   *
+   * This will release the connection if it is still held.
+   *
+   * It will also notify the listener that the call completed; either successfully or
+   * unsuccessfully.
    *
    * If the call was canceled or timed out, this will wrap [e] in an exception that provides that
    * additional context. Otherwise [e] is returned as-is.
    */
-  private fun <E : IOException?> maybeReleaseConnection(e: E, incrementSuccesses: Boolean): E {
-    var result = e
+  private fun <E : IOException?> callDone(e: E): E {
+    assertThreadDoesntHoldLock()
+
     val connection = this.connection
     if (connection != null) {
       connection.assertThreadDoesntHoldLock()
-      var socket: Socket? = null
-      synchronized(connection) {
-        if (incrementSuccesses) {
-          connection.successCount++
-        }
-        if (exchange == null && noMoreExchanges) {
-          socket = releaseConnectionNoEvents() // Sets this.connection to null.
-        }
+      val socket = synchronized(connection) {
+        releaseConnectionNoEvents() // Sets this.connection to null.
       }
       if (this.connection == null) {
         socket?.closeQuietly()
@@ -323,15 +357,11 @@ class RealCall(
       }
     }
 
-    val callEnd = noMoreExchanges && exchange == null
-    if (callEnd) {
-      val callFailed = result != null
-      result = timeoutExit(result)
-      if (callFailed) {
-        eventListener.callFailed(this, result!!)
-      } else {
-        eventListener.callEnd(this)
-      }
+    val result = timeoutExit(e)
+    if (e != null) {
+      eventListener.callFailed(this, result!!)
+    } else {
+      eventListener.callEnd(this)
     }
     return result
   }
@@ -386,11 +416,12 @@ class RealCall(
    *     This is usually due to either an exception or a retry.
    */
   internal fun exitNetworkInterceptorExchange(closeExchange: Boolean) {
-    check(!noMoreExchanges) { "released" }
+    synchronized(this) {
+      check(expectMoreExchanges) { "released" }
+    }
 
     if (closeExchange) {
       exchange?.detachWithViolence()
-      check(exchange == null)
     }
 
     interceptorScopedExchange = null
