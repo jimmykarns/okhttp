@@ -231,9 +231,11 @@ internal class DerReader(source: Source) {
   fun readBitString(): BitString {
     if (bytesLeft == -1L || constructed) {
       throw ProtocolException("constructed bit strings not supported for DER")
+
     }
     if (bytesLeft < 1) {
       throw ProtocolException("malformed bit string")
+
     }
     val unusedBitCount = source.readByte().toInt() and 0xff
     val byteString = source.readByteString(bytesLeft)

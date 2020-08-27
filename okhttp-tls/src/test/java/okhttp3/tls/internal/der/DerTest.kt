@@ -810,6 +810,27 @@ internal class DerTest {
     }
   }
 
+
+  @Test fun `cannot decode constructed octet string`() {
+    try {
+      Adapters.OCTET_STRING.fromDer(
+          "2410040668656c6c6f200406776f726c6421".decodeHex())
+      fail()
+    } catch (expected: ProtocolException) {
+      assertThat(expected).hasMessage("constructed octet strings not supported for DER")
+    }
+  }
+
+  @Test fun `cannot decode constructed bit string`() {
+    try {
+      Adapters.BIT_STRING.fromDer(
+          "231203070068656c6c6f20030700776f726c6421".decodeHex())
+      fail()
+    } catch (expected: ProtocolException) {
+      assertThat(expected).hasMessage("constructed bit strings not supported for DER")
+    }
+  }
+
   @Test fun `cannot decode constructed string`() {
     try {
       Adapters.UTF8_STRING.fromDer(
@@ -818,6 +839,37 @@ internal class DerTest {
     } catch (expected: ProtocolException) {
       assertThat(expected).hasMessage("constructed strings not supported for DER")
     }
+
+  }
+
+  @Test fun `cannot decode indefinite length bit string`() {
+    try {
+      Adapters.BIT_STRING.fromDer(
+          "23800303000A3B0305045F291CD00000".decodeHex())
+      fail()
+    } catch (expected: ProtocolException) {
+      assertThat(expected).hasMessage("indefinite length not permitted for DER")
+    }
+  }
+
+  @Test fun `cannot decode constructed octet string in enclosing sequence`() {
+    val buffer = Buffer()
+        .write("3A0904034A6F6E04026573".decodeHex())
+    val derReader = DerReader(buffer)
+    try {
+      derReader.read("test") {
+        derReader.readOctetString()
+      }
+      fail()
+    } catch (expected: Exception) {
+      assertThat(expected).hasMessage("constructed octet strings not supported for DER")
+    }
+  }
+
+  @Test fun `encode octet string`() {
+    val byteString = Adapters.OCTET_STRING.toDer("030206A0".decodeHex())
+    assertThat(byteString).isEqualTo("0404030206A0".decodeHex())
+
   }
 
   @Test fun `cannot decode indefinite length bit string`() {

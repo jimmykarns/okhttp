@@ -424,7 +424,18 @@ internal object Adapters {
           }
         }
 
-        throw ProtocolException("expected any but was $peekedHeader at $reader")
+
+        reader.read("ANY") { header ->
+          val bytes = reader.readUnknown()
+          return AnyValue(
+              tagClass = header.tagClass,
+              tag = header.tag,
+              constructed = header.constructed,
+              length = header.length,
+              bytes = bytes
+          )
+        }
+
       }
     }
   }
