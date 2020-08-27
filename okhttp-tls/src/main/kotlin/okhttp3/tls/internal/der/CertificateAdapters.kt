@@ -16,8 +16,10 @@
 package okhttp3.tls.internal.der
 
 import java.math.BigInteger
+
 import java.net.ProtocolException
 import okio.ByteString
+
 
 /**
  * ASN.1 adapters adapted from the specifications in [RFC 5280][rfc_5280].
@@ -86,8 +88,11 @@ internal object CertificateAdapters {
       time,
       decompose = {
         listOf(
-            it.notBefore,
-            it.notAfter
+
+            // TODO(jwilson): when to use GENERALIZED_TIME? It will still work in 2050.
+            Adapters.UTC_TIME to it.notBefore,
+            Adapters.UTC_TIME to it.notAfter
+
         )
       },
       construct = {
@@ -98,8 +103,9 @@ internal object CertificateAdapters {
       }
   )
 
-  /** The type of the parameters depends on the algorithm that precedes it. */
-  private val algorithmParameters: DerAdapter<Any?> = Adapters.usingTypeHint { typeHint ->
+
+  val algorithmParameters = Adapters.usingTypeHint { typeHint ->
+
     when (typeHint) {
       // This type is pretty strange. The spec says that for certain algorithms we must encode null
       // when it is present, and for others we must omit it!
@@ -123,18 +129,10 @@ internal object CertificateAdapters {
       "AlgorithmIdentifier",
       Adapters.OBJECT_IDENTIFIER.asTypeHint(),
       algorithmParameters,
-      decompose = {
-        listOf(
-            it.algorithm,
-            it.parameters
-        )
-      },
-      construct = {
-        AlgorithmIdentifier(
-            algorithm = it[0] as String,
-            parameters = it[1]
-        )
-      }
+
+      decompose = { listOf(it.algorithm, it.parameters) },
+      construct = { AlgorithmIdentifier(it[0] as String, it[1]) }
+
   )
 
   /**
@@ -197,8 +195,9 @@ internal object CertificateAdapters {
    * GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
    * ```
    */
-  private val subjectAlternativeName: BasicDerAdapter<List<Pair<DerAdapter<*>, Any?>>> =
-    generalName.asSequenceOf()
+
+  internal val subjectAlternativeName = generalName.asSequenceOf()
+
 
   /**
    * This uses the preceding extension ID to select which adapter to use for the extension value
