@@ -710,8 +710,8 @@ class KotlinSourceModernTest {
     var pushPromises: List<PushPromise> = mockResponse.pushPromises
     pushPromises = mockResponse.pushPromises
     mockResponse = mockResponse.withSettings(Settings())
-    var settings: Settings = mockResponse.settings
-    settings = mockResponse.settings
+//    var settings: Settings = mockResponse.settings
+//    settings = mockResponse.settings
     mockResponse = mockResponse.withWebSocketUpgrade(object : WebSocketListener() {
     })
     var webSocketListener: WebSocketListener? = mockResponse.webSocketListener
