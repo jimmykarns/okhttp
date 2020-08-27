@@ -772,6 +772,7 @@ internal class DerTest {
     assertThat(Adapters.BIT_STRING.toDer(bitString)).isEqualTo(bytes)
   }
 
+
   @Test fun `cannot decode empty bit string`() {
     val bytes = "0300".decodeHex()
     try {
@@ -876,7 +877,8 @@ internal class DerTest {
 
   @Test fun `extension with type hint for subject alternative names`() {
     val extension = Extension(
-        subjectAlternativeName,
+        ObjectIdentifiers.subjectAlternativeName,
+
         false,
         listOf(
             generalNameDnsName to "cash.app",
