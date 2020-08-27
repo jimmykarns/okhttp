@@ -21,7 +21,6 @@ import okio.Buffer
 import okio.BufferedSource
 import okio.ByteString
 import okio.ForwardingSource
-import okio.IOException
 import okio.Source
 import okio.buffer
 
@@ -100,7 +99,7 @@ internal class DerReader(source: Source) {
    * Consume the next header in the stream and return it. If there is no header to read because we
    * have reached a limit, this returns [END_OF_DATA].
    */
-  private fun readHeader(): DerHeader {
+  internal fun readHeader(): DerHeader {
     require(peekedHeader == null)
 
     // We've hit a local limit.
@@ -123,19 +122,18 @@ internal class DerReader(source: Source) {
     val length0 = source.readByte().toInt() and 0xff
     val length = when {
       length0 == 0b1000_0000 -> {
-        // Indefinite length.
-        -1L
+        throw ProtocolException("indefinite length not permitted for DER")
       }
       (length0 and 0b1000_0000) == 0b1000_0000 -> {
         // Length specified over multiple bytes.
         val lengthBytes = length0 and 0b0111_1111
         if (lengthBytes > 8) {
-          throw ProtocolException("Length encoded with more than 8 bytes is not supported")
+          throw ProtocolException("length encoded with more than 8 bytes is not supported")
         }
 
         var lengthBits = source.readByte().toLong() and 0xff
         if (lengthBits == 0L || lengthBytes == 1 && lengthBits and 0b1000_0000 == 0L) {
-          throw ProtocolException("Invalid encoding for length")
+          throw ProtocolException("invalid encoding for length")
         }
 
         for (i in 1 until lengthBytes) {
@@ -143,7 +141,7 @@ internal class DerReader(source: Source) {
           lengthBits += source.readByte().toInt() and 0xff
         }
 
-        if (lengthBits < 0) throw ProtocolException("Length > Long.MAX_VALUE is not supported")
+        if (lengthBits < 0) throw ProtocolException("length > Long.MAX_VALUE")
 
         lengthBits
       }
@@ -162,7 +160,7 @@ internal class DerReader(source: Source) {
    * header. It is an error to not consume a full value in [block].
    */
   internal inline fun <T> read(name: String?, block: (DerHeader) -> T): T {
-    if (!hasNext()) throw IOException("expected a value")
+    if (!hasNext()) throw ProtocolException("expected a value")
 
     val header = peekedHeader!!
     peekedHeader = null
@@ -170,22 +168,28 @@ internal class DerReader(source: Source) {
     val pushedLimit = limit
     val pushedConstructed = constructed
 
-    limit = if (header.length != -1L) byteCount + header.length else -1L
+    val newLimit = if (header.length != -1L) byteCount + header.length else -1L
+    if (pushedLimit != -1L && newLimit > pushedLimit) {
+      throw ProtocolException("enclosed object too large")
+    }
+
+    limit = newLimit
     constructed = header.constructed
     if (name != null) path += name
     try {
-      return block(header)
+      val result = block(header)
+
+      // The object processed bytes beyond its range.
+      if (newLimit != -1L && byteCount > newLimit) {
+        throw ProtocolException("unexpected byte count at $this")
+      }
+
+      return result
     } finally {
       peekedHeader = null
       limit = pushedLimit
       constructed = pushedConstructed
       if (name != null) path.removeAt(path.size - 1)
-    }
-  }
-
-  private inline fun readAll(block: (DerHeader) -> Unit) {
-    while (hasNext()) {
-      read(null, block)
     }
   }
 
@@ -225,55 +229,29 @@ internal class DerReader(source: Source) {
   }
 
   fun readBitString(): BitString {
-    val buffer = Buffer()
-    val unusedBitCount = readBitString(buffer)
-    return BitString(buffer.readByteString(), unusedBitCount)
-  }
-
-  private fun readBitString(sink: Buffer): Int {
-    if (bytesLeft != -1L) {
-      val unusedBitCount = source.readByte().toInt() and 0xff
-      source.read(sink, bytesLeft)
-      return unusedBitCount
-    } else {
-      var unusedBitCount = 0
-      readAll {
-        unusedBitCount = readBitString(sink)
-      }
-      return unusedBitCount
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed bit strings not supported for DER")
     }
+    if (bytesLeft < 1) {
+      throw ProtocolException("malformed bit string")
+    }
+    val unusedBitCount = source.readByte().toInt() and 0xff
+    val byteString = source.readByteString(bytesLeft)
+    return BitString(byteString, unusedBitCount)
   }
 
   fun readOctetString(): ByteString {
-    val buffer = Buffer()
-    readOctetString(buffer)
-    return buffer.readByteString()
-  }
-
-  private fun readOctetString(sink: Buffer) {
-    if (bytesLeft != -1L && !constructed) {
-      source.read(sink, bytesLeft)
-    } else {
-      readAll {
-        readOctetString(sink)
-      }
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed octet strings not supported for DER")
     }
+    return source.readByteString(bytesLeft)
   }
 
   fun readUtf8String(): String {
-    val buffer = Buffer()
-    readUtf8String(buffer)
-    return buffer.readUtf8()
-  }
-
-  private fun readUtf8String(sink: Buffer) {
-    if (bytesLeft != -1L && !constructed) {
-      source.read(sink, bytesLeft)
-    } else {
-      readAll {
-        readUtf8String(sink)
-      }
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed strings not supported for DER")
     }
+    return source.readUtf8(bytesLeft)
   }
 
   fun readObjectIdentifier(): String {
@@ -327,6 +305,11 @@ internal class DerReader(source: Source) {
         return result + byteN
       }
     }
+  }
+
+  /** Read a value as bytes without interpretation of its contents. */
+  fun readUnknown(): ByteString {
+    return source.readByteString(bytesLeft)
   }
 
   override fun toString() = path.joinToString(separator = " / ")
