@@ -15,8 +15,9 @@
  */
 package okhttp3.tls.internal.der
 
-import java.io.IOException
 import java.math.BigInteger
+import java.net.ProtocolException
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -163,18 +164,22 @@ internal object Adapters {
 
   internal fun parseUtcTime(string: String): Long {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyMMddHHmmss'Z'").apply {
       timeZone = utc
       set2DigitYearStart(Date(-631152000000L)) // 1950-01-01T00:00:00Z.
     }
 
-    val parsed = dateFormat.parse(string)
-    return parsed.time
+    try {
+      val parsed = dateFormat.parse(string)
+      return parsed.time
+    } catch (e: ParseException) {
+      throw ProtocolException("Failed to parse UTCTime $string")
+    }
   }
 
   internal fun formatUtcTime(date: Long): String {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyMMddHHmmss'Z'").apply {
       timeZone = utc
       set2DigitYearStart(Date(-631152000000L)) // 1950-01-01T00:00:00Z.
     }
@@ -202,19 +207,48 @@ internal object Adapters {
       }
   )
 
+  /** Decodes any value without interpretation as [AnyValue]. */
+  val ANY_VALUE = object : DerAdapter<AnyValue> {
+    override fun matches(header: DerHeader) = true
+
+    override fun fromDer(reader: DerReader): AnyValue {
+      reader.read("ANY") { header ->
+        val bytes = reader.readUnknown()
+        return AnyValue(
+            tagClass = header.tagClass,
+            tag = header.tag,
+            constructed = header.constructed,
+            length = header.length,
+            bytes = bytes
+        )
+      }
+    }
+
+    override fun toDer(writer: DerWriter, value: AnyValue) {
+      writer.write("ANY", value.tagClass, value.tag) {
+        writer.writeOctetString(value.bytes)
+        writer.constructed = value.constructed
+      }
+    }
+  }
+
   internal fun parseGeneralizedTime(string: String): Long {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyyyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyyyMMddHHmmss'Z'").apply {
       timeZone = utc
     }
 
-    val parsed = dateFormat.parse(string)
-    return parsed.time
+    try {
+      val parsed = dateFormat.parse(string)
+      return parsed.time
+    } catch (e: ParseException) {
+      throw ProtocolException("Failed to parse GeneralizedTime $string")
+    }
   }
 
   internal fun formatGeneralizedTime(date: Long): String {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyyyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyyyMMddHHmmss'Z'").apply {
       timeZone = utc
     }
 
@@ -239,35 +273,29 @@ internal object Adapters {
   ): BasicDerAdapter<T> {
     val codec = object : BasicDerAdapter.Codec<T> {
       override fun decode(reader: DerReader): T {
-        reader.pushTypeHint()
-        try {
+        return reader.withTypeHint {
           val list = mutableListOf<Any?>()
 
           while (list.size < members.size) {
             val member = members[list.size]
-            list += member.readValue(reader)
+            list += member.fromDer(reader)
           }
 
           if (reader.hasNext()) {
-            throw IOException("unexpected ${reader.peekHeader()}")
+            throw ProtocolException("unexpected ${reader.peekHeader()} at $reader")
           }
 
-          return construct(list)
-        } finally {
-          reader.popTypeHint()
+          return@withTypeHint construct(list)
         }
       }
 
       override fun encode(writer: DerWriter, value: T) {
         val list = decompose(value)
-        writer.pushTypeHint()
-        try {
+        writer.withTypeHint {
           for (i in list.indices) {
             val adapter = members[i] as DerAdapter<Any?>
-            adapter.writeValue(writer, list[i])
+            adapter.toDer(writer, list[i])
           }
-        } finally {
-          writer.popTypeHint()
         }
       }
     }
@@ -285,19 +313,20 @@ internal object Adapters {
     return object : DerAdapter<Pair<DerAdapter<*>, Any?>> {
       override fun matches(header: DerHeader): Boolean = true
 
-      override fun readValue(reader: DerReader): Pair<DerAdapter<*>, Any?> {
+      override fun fromDer(reader: DerReader): Pair<DerAdapter<*>, Any?> {
         val peekedHeader = reader.peekHeader()
-            ?: throw IOException("expected a value")
+            ?: throw ProtocolException("expected a value at $reader")
 
         val choice = choices.firstOrNull { it.matches(peekedHeader) }
-            ?: throw IOException("expected a matching choice but was $peekedHeader")
+            ?: throw ProtocolException(
+                "expected a matching choice but was $peekedHeader at $reader")
 
-        return choice to choice.readValue(reader)
+        return choice to choice.fromDer(reader)
       }
 
-      override fun writeValue(writer: DerWriter, value: Pair<DerAdapter<*>, Any?>) {
+      override fun toDer(writer: DerWriter, value: Pair<DerAdapter<*>, Any?>) {
         val (adapter, v) = value
-        (adapter as DerAdapter<Any?>).writeValue(writer, v)
+        (adapter as DerAdapter<Any?>).toDer(writer, v)
       }
 
       override fun toString() = choices.joinToString(separator = " OR ")
@@ -317,27 +346,23 @@ internal object Adapters {
     chooser: (Any?) -> DerAdapter<*>?
   ): DerAdapter<Any?> {
     return object : DerAdapter<Any?> {
-      override fun matches(header: DerHeader): Boolean = true
+      override fun matches(header: DerHeader) = true
 
-      override fun writeValue(writer: DerWriter, value: Any?) {
+      override fun toDer(writer: DerWriter, value: Any?) {
         // If we don't understand this hint, encode the body as a byte string. The byte string
         // will include a tag and length header as a prefix.
-        val adapter = chooser(writer.typeHint)
-
-        if (adapter != null) {
-          (adapter as DerAdapter<Any?>).writeValue(writer, value)
-        } else {
-          writer.writeOctetString(value as ByteString)
+        val adapter = chooser(writer.typeHint) as DerAdapter<Any?>?
+        when {
+          adapter != null -> adapter.toDer(writer, value)
+          else -> writer.writeOctetString(value as ByteString)
         }
       }
 
-      override fun readValue(reader: DerReader): Any? {
-        val adapter = chooser(reader.typeHint)
-
-        if (adapter != null) {
-          return (adapter as DerAdapter<Any?>).readValue(reader)
-        } else {
-          return reader.readOctetString()
+      override fun fromDer(reader: DerReader): Any? {
+        val adapter = chooser(reader.typeHint) as DerAdapter<Any?>?
+        return when {
+          adapter != null -> adapter.fromDer(reader)
+          else -> reader.readUnknown()
         }
       }
     }
@@ -359,7 +384,8 @@ internal object Adapters {
       String::class to PRINTABLE_STRING,
       Nothing::class to IA5_STRING,
       Nothing::class to UTC_TIME,
-      Long::class to GENERALIZED_TIME
+      Long::class to GENERALIZED_TIME,
+      AnyValue::class to ANY_VALUE
   )
 
   fun any(
@@ -370,22 +396,16 @@ internal object Adapters {
     return object : DerAdapter<Any?> {
       override fun matches(header: DerHeader): Boolean = true
 
-      override fun writeValue(writer: DerWriter, value: Any?) {
+      override fun toDer(writer: DerWriter, value: Any?) {
         when {
           isOptional && value == optionalValue -> {
             // Write nothing.
           }
 
-          value is AnyValue -> {
-            writer.write("ANY", value.tagClass, value.tag) {
-              writer.writeOctetString(value.bytes)
-            }
-          }
-
           else -> {
             for ((type, adapter) in choices) {
               if (type.isInstance(value) || (value == null && type == Unit::class)) {
-                (adapter as DerAdapter<Any?>).writeValue(writer, value)
+                (adapter as DerAdapter<Any?>).toDer(writer, value)
                 return
               }
             }
@@ -393,25 +413,18 @@ internal object Adapters {
         }
       }
 
-      override fun readValue(reader: DerReader): Any? {
+      override fun fromDer(reader: DerReader): Any? {
         if (isOptional && !reader.hasNext()) return optionalValue
 
+        val peekedHeader = reader.peekHeader()
+            ?: throw ProtocolException("expected a value at $reader")
         for ((_, adapter) in choices) {
-          if (adapter.matches(reader.peekHeader()!!)) {
-            return adapter.readValue(reader)
+          if (adapter.matches(peekedHeader)) {
+            return adapter.fromDer(reader)
           }
         }
 
-        reader.read("ANY") { header ->
-          val bytes = reader.readOctetString()
-          return AnyValue(
-              tagClass = header.tagClass,
-              tag = header.tag,
-              constructed = header.constructed,
-              length = header.length,
-              bytes = bytes
-          )
-        }
+        throw ProtocolException("expected any but was $peekedHeader at $reader")
       }
     }
   }

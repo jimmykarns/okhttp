@@ -21,7 +21,6 @@ import okio.Buffer
 import okio.BufferedSource
 import okio.ByteString
 import okio.ForwardingSource
-import okio.IOException
 import okio.Source
 import okio.buffer
 
@@ -47,9 +46,9 @@ internal class DerReader(source: Source) {
     get() = countingSource.bytesRead - source.buffer.size
 
   /** How many bytes to read before [peekHeader] should return false, or -1L for no limit. */
-  private var limit: Long = -1L
+  private var limit = -1L
 
-  /** Type hints scoped to the call stack, manipulated with [pushTypeHint] and [popTypeHint]. */
+  /** Type hints scoped to the call stack, manipulated with [withTypeHint]. */
   private val typeHintStack = mutableListOf<Any?>()
 
   /**
@@ -59,18 +58,18 @@ internal class DerReader(source: Source) {
   var typeHint: Any?
     get() = typeHintStack.lastOrNull()
     set(value) {
-      typeHintStack.set(typeHintStack.size - 1, value)
+      typeHintStack[typeHintStack.size - 1] = value
     }
 
   /** Names leading to the current location in the ASN.1 document. */
   private val path = mutableListOf<String>()
 
-  private var constructed: Boolean = false
+  private var constructed = false
 
   private var peekedHeader: DerHeader? = null
 
   private val bytesLeft: Long
-    get() = if (limit == -1L) -1L else limit - byteCount
+    get() = if (limit == -1L) -1L else (limit - byteCount)
 
   fun hasNext(): Boolean = peekHeader() != null
 
@@ -100,7 +99,7 @@ internal class DerReader(source: Source) {
    * Consume the next header in the stream and return it. If there is no header to read because we
    * have reached a limit, this returns [END_OF_DATA].
    */
-  private fun readHeader(): DerHeader {
+  internal fun readHeader(): DerHeader {
     require(peekedHeader == null)
 
     // We've hit a local limit.
@@ -110,35 +109,46 @@ internal class DerReader(source: Source) {
     if (limit == -1L && source.exhausted()) return END_OF_DATA
 
     // Read the tag.
-    val tag: Long
     val tagAndClass = source.readByte().toInt() and 0xff
     val tagClass = tagAndClass and 0b1100_0000
     val constructed = (tagAndClass and 0b0010_0000) == 0b0010_0000
     val tag0 = tagAndClass and 0b0001_1111
-    if (tag0 == 0b0001_1111) {
-      tag = readVariableLengthLong()
-    } else {
-      tag = tag0.toLong()
+    val tag = when (tag0) {
+      0b0001_1111 -> readVariableLengthLong()
+      else -> tag0.toLong()
     }
 
     // Read the length.
-    val length: Long
     val length0 = source.readByte().toInt() and 0xff
-    if (length0 == 0b1000_0000) {
-      // Indefinite length.
-      length = -1L
-    } else if ((length0 and 0b1000_0000) == 0b1000_0000) {
-      // Length specified over multiple bytes.
-      val lengthBytes = length0 and 0b0111_1111
-      var lengthBits = source.readByte().toLong() and 0xff
-      for (i in 1 until lengthBytes) {
-        lengthBits = lengthBits shl 8
-        lengthBits += source.readByte().toInt() and 0xff
+    val length = when {
+      length0 == 0b1000_0000 -> {
+        throw ProtocolException("indefinite length not permitted for DER")
       }
-      length = lengthBits
-    } else {
-      // Length is 127 or fewer bytes.
-      length = (length0 and 0b0111_1111).toLong()
+      (length0 and 0b1000_0000) == 0b1000_0000 -> {
+        // Length specified over multiple bytes.
+        val lengthBytes = length0 and 0b0111_1111
+        if (lengthBytes > 8) {
+          throw ProtocolException("length encoded with more than 8 bytes is not supported")
+        }
+
+        var lengthBits = source.readByte().toLong() and 0xff
+        if (lengthBits == 0L || lengthBytes == 1 && lengthBits and 0b1000_0000 == 0L) {
+          throw ProtocolException("invalid encoding for length")
+        }
+
+        for (i in 1 until lengthBytes) {
+          lengthBits = lengthBits shl 8
+          lengthBits += source.readByte().toInt() and 0xff
+        }
+
+        if (lengthBits < 0) throw ProtocolException("length > Long.MAX_VALUE")
+
+        lengthBits
+      }
+      else -> {
+        // Length is 127 or fewer bytes.
+        (length0 and 0b0111_1111).toLong()
+      }
     }
 
     // Note that this may be be an encoded "end of data" header.
@@ -150,7 +160,7 @@ internal class DerReader(source: Source) {
    * header. It is an error to not consume a full value in [block].
    */
   internal inline fun <T> read(name: String?, block: (DerHeader) -> T): T {
-    if (!hasNext()) throw IOException("expected a value")
+    if (!hasNext()) throw ProtocolException("expected a value")
 
     val header = peekedHeader!!
     peekedHeader = null
@@ -158,11 +168,23 @@ internal class DerReader(source: Source) {
     val pushedLimit = limit
     val pushedConstructed = constructed
 
-    limit = if (header.length != -1L) byteCount + header.length else -1L
+    val newLimit = if (header.length != -1L) byteCount + header.length else -1L
+    if (pushedLimit != -1L && newLimit > pushedLimit) {
+      throw ProtocolException("enclosed object too large")
+    }
+
+    limit = newLimit
     constructed = header.constructed
     if (name != null) path += name
     try {
-      return block(header)
+      val result = block(header)
+
+      // The object processed bytes beyond its range.
+      if (newLimit != -1L && byteCount > newLimit) {
+        throw ProtocolException("unexpected byte count at $this")
+      }
+
+      return result
     } finally {
       peekedHeader = null
       limit = pushedLimit
@@ -171,35 +193,34 @@ internal class DerReader(source: Source) {
     }
   }
 
-  private inline fun readAll(block: (DerHeader) -> Unit) {
-    while (hasNext()) {
-      read(null, block)
+  /**
+   * Execute [block] with a new namespace for type hints. Type hints from the enclosing type are no
+   * longer usable by the current type's members.
+   */
+  fun <T> withTypeHint(block: () -> T): T {
+    typeHintStack.add(null)
+    try {
+      return block()
+    } finally {
+      typeHintStack.removeAt(typeHintStack.size - 1)
     }
   }
 
-  fun pushTypeHint() {
-    typeHintStack.add(null)
-  }
-
-  fun popTypeHint() {
-    typeHintStack.removeAt(typeHintStack.size - 1)
-  }
-
   fun readBoolean(): Boolean {
-    if (bytesLeft != 1L) throw ProtocolException("unexpected length: $bytesLeft")
+    if (bytesLeft != 1L) throw ProtocolException("unexpected length: $bytesLeft at $this")
     return source.readByte().toInt() != 0
   }
 
   fun readBigInteger(): BigInteger {
-    if (bytesLeft == 0L) throw ProtocolException("unexpected length: $bytesLeft")
+    if (bytesLeft == 0L) throw ProtocolException("unexpected length: $bytesLeft at $this")
     val byteArray = source.readByteArray(bytesLeft)
     return BigInteger(byteArray)
   }
 
   fun readLong(): Long {
-    if (bytesLeft !in 1..8) throw ProtocolException("unexpected length: $bytesLeft")
+    if (bytesLeft !in 1..8) throw ProtocolException("unexpected length: $bytesLeft at $this")
 
-    var result = source.readByte().toLong() // No "and 0xff" because this is a signed value.
+    var result = source.readByte().toLong() // No "and 0xff" because this is a signed value!
     while (byteCount < limit) {
       result = result shl 8
       result += source.readByte().toInt() and 0xff
@@ -208,55 +229,29 @@ internal class DerReader(source: Source) {
   }
 
   fun readBitString(): BitString {
-    val buffer = Buffer()
-    val unusedBitCount = readBitString(buffer)
-    return BitString(buffer.readByteString(), unusedBitCount)
-  }
-
-  private fun readBitString(sink: Buffer): Int {
-    if (bytesLeft != -1L) {
-      val unusedBitCount = source.readByte().toInt() and 0xff
-      source.read(sink, bytesLeft)
-      return unusedBitCount
-    } else {
-      var unusedBitCount = 0
-      readAll {
-        unusedBitCount = readBitString(sink)
-      }
-      return unusedBitCount
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed bit strings not supported for DER")
     }
+    if (bytesLeft < 1) {
+      throw ProtocolException("malformed bit string")
+    }
+    val unusedBitCount = source.readByte().toInt() and 0xff
+    val byteString = source.readByteString(bytesLeft)
+    return BitString(byteString, unusedBitCount)
   }
 
   fun readOctetString(): ByteString {
-    val buffer = Buffer()
-    readOctetString(buffer)
-    return buffer.readByteString()
-  }
-
-  private fun readOctetString(sink: Buffer) {
-    if (bytesLeft != -1L && !constructed) {
-      source.read(sink, bytesLeft)
-    } else {
-      readAll {
-        readOctetString(sink)
-      }
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed octet strings not supported for DER")
     }
+    return source.readByteString(bytesLeft)
   }
 
   fun readUtf8String(): String {
-    val buffer = Buffer()
-    readUtf8String(buffer)
-    return buffer.readUtf8()
-  }
-
-  private fun readUtf8String(sink: Buffer) {
-    if (bytesLeft != -1L && !constructed) {
-      source.read(sink, bytesLeft)
-    } else {
-      readAll {
-        readUtf8String(sink)
-      }
+    if (bytesLeft == -1L || constructed) {
+      throw ProtocolException("constructed strings not supported for DER")
     }
+    return source.readUtf8(bytesLeft)
   }
 
   fun readObjectIdentifier(): String {
@@ -312,7 +307,26 @@ internal class DerReader(source: Source) {
     }
   }
 
+  /** Read a value as bytes without interpretation of its contents. */
+  fun readUnknown(): ByteString {
+    return source.readByteString(bytesLeft)
+  }
+
   override fun toString() = path.joinToString(separator = " / ")
+
+  companion object {
+    /**
+     * A synthetic value that indicates there's no more bytes. Values with equivalent data may also
+     * show up in ASN.1 streams to also indicate the end of SEQUENCE, SET or other constructed
+     * value.
+     */
+    private val END_OF_DATA = DerHeader(
+        tagClass = DerHeader.TAG_CLASS_UNIVERSAL,
+        tag = DerHeader.TAG_END_OF_CONTENTS,
+        constructed = false,
+        length = -1L
+    )
+  }
 
   /** A source that keeps track of how many bytes it's consumed. */
   private class CountingSource(source: Source) : ForwardingSource(source) {
@@ -324,19 +338,5 @@ internal class DerReader(source: Source) {
       bytesRead += result
       return result
     }
-  }
-
-  companion object {
-    /**
-     * A synthetic value that indicates there's no more bytes. Values with equivalent data may also
-     * show up in ASN.1 streams to also indicate the end of SEQUENCE, SET or other constructed
-     * value.
-     */
-    val END_OF_DATA = DerHeader(
-        tagClass = DerHeader.TAG_CLASS_UNIVERSAL,
-        tag = DerHeader.TAG_END_OF_CONTENTS,
-        constructed = false,
-        length = -1L
-    )
   }
 }

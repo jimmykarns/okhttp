@@ -19,14 +19,24 @@ import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
+
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.TimeZone
 import okhttp3.tls.HeldCertificate
 import okhttp3.tls.decodeCertificatePem
+import okhttp3.tls.internal.der.ObjectIdentifiers.basicConstraints
+import okhttp3.tls.internal.der.ObjectIdentifiers.commonName
+import okhttp3.tls.internal.der.ObjectIdentifiers.organizationalUnitName
 import okhttp3.tls.internal.der.ObjectIdentifiers.rsaEncryption
 import okhttp3.tls.internal.der.ObjectIdentifiers.sha256WithRSAEncryption
+import okhttp3.tls.internal.der.ObjectIdentifiers.subjectAlternativeName
+
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.decodeHex
+import okio.ByteString.Companion.encodeUtf8
 import okio.ByteString.Companion.toByteString
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -36,18 +46,14 @@ internal class DerCertificatesTest {
   private val country = "1.3.6.1.4.1.311.60.2.1.3"
   private val certificateTransparencySignedCertificateTimestamps = "1.3.6.1.4.1.11129.2.4.2"
   private val authorityInfoAccess = "1.3.6.1.5.5.7.1.1"
-  private val commonName = "2.5.4.3"
   private val serialNumber = "2.5.4.5"
   private val countryName = "2.5.4.6"
   private val localityName = "2.5.4.7"
   private val stateOrProvinceName = "2.5.4.8"
   private val organizationName = "2.5.4.10"
-  private val organizationalUnitName = "2.5.4.11"
   private val businessCategory = "2.5.4.15"
   private val subjectKeyIdentifier = "2.5.29.14"
   private val keyUsage = "2.5.29.15"
-  private val subjectAltName = "2.5.29.17"
-  private val basicConstraints = "2.5.29.19"
   private val crlDistributionPoints = "2.5.29.31"
   private val certificatePolicies = "2.5.29.32"
   private val authorityKeyIdentifier = "2.5.29.35"
@@ -295,45 +301,45 @@ internal class DerCertificatesTest {
                 subjectUniqueID = null,
                 extensions = listOf(
                     Extension(
-                        extnID = keyUsage,
+                        id = keyUsage,
                         critical = true,
-                        extnValue = "03020106".decodeHex()
+                        value = "03020106".decodeHex()
                     ),
                     Extension(
-                        extnID = basicConstraints,
+                        id = basicConstraints,
                         critical = true,
-                        extnValue = BasicConstraints(
+                        value = BasicConstraints(
                             ca = true,
-                            pathLenConstraint = 1L
+                            maxIntermediateCas = 1L
                         )
                     ),
                     Extension(
-                        extnID = authorityInfoAccess,
+                        id = authorityInfoAccess,
                         critical = false,
-                        extnValue = ("3025302306082b060105050730018617687474703a2f2f6f6373702e656" +
+                        value = ("3025302306082b060105050730018617687474703a2f2f6f6373702e656" +
                             "e74727573742e6e6574").decodeHex()
                     ),
                     Extension(
-                        extnID = crlDistributionPoints,
+                        id = crlDistributionPoints,
                         critical = false,
-                        extnValue = ("302a3028a026a0248622687474703a2f2f63726c2e656e74727573742e6" +
+                        value = ("302a3028a026a0248622687474703a2f2f63726c2e656e74727573742e6" +
                             "e65742f726f6f746361312e63726c").decodeHex()
                     ),
                     Extension(
-                        extnID = certificatePolicies,
+                        id = certificatePolicies,
                         critical = false,
-                        extnValue = ("303230300604551d20003028302606082b06010505070201161a6874747" +
+                        value = ("303230300604551d20003028302606082b06010505070201161a6874747" +
                             "03a2f2f7777772e656e74727573742e6e65742f435053").decodeHex()
                     ),
                     Extension(
-                        extnID = subjectKeyIdentifier,
+                        id = subjectKeyIdentifier,
                         critical = false,
-                        extnValue = "04146a72267ad01eef7de73b6951d46c8d9f901266ab".decodeHex()
+                        value = "04146a72267ad01eef7de73b6951d46c8d9f901266ab".decodeHex()
                     ),
                     Extension(
-                        extnID = authorityKeyIdentifier,
+                        id = authorityKeyIdentifier,
                         critical = false,
-                        extnValue = "301680146890e467a4a65380c78666a4f1f74b43fb84bd6d".decodeHex()
+                        value = "301680146890e467a4a65380c78666a4f1f74b43fb84bd6d".decodeHex()
                     )
                 )
             ),
@@ -536,17 +542,17 @@ internal class DerCertificatesTest {
                 subjectUniqueID = null,
                 extensions = listOf(
                     Extension(
-                        extnID = subjectAltName,
+                        id = subjectAlternativeName,
                         critical = false,
-                        extnValue = listOf(
+                        value = listOf(
                             CertificateAdapters.generalNameDnsName to "cash.app",
                             CertificateAdapters.generalNameDnsName to "www.cash.app"
                         )
                     ),
                     Extension(
-                        extnID = certificateTransparencySignedCertificateTimestamps,
+                        id = certificateTransparencySignedCertificateTimestamps,
                         critical = false,
-                        extnValue = ("0482016b01690077005614069a2fd7c2ecd3f5e1bd44b23ec74676b9bc9" +
+                        value = ("0482016b01690077005614069a2fd7c2ecd3f5e1bd44b23ec74676b9bc9" +
                             "9115cc0ef949855d689d0dd0000017173d3269b0000040300483046022100a9e58ad" +
                             "ee5adf4b5f5a7797480f80dc58041d78da8aad44c9cc0416a74cacb62022100eb463" +
                             "ecf46c5725dfd50471804e4c665e8ae9790129b69706502a3e96fccf685007700877" +
@@ -560,51 +566,51 @@ internal class DerCertificatesTest {
                             .decodeHex()
                     ),
                     Extension(
-                        extnID = keyUsage,
+                        id = keyUsage,
                         critical = true,
-                        extnValue = "030205a0".decodeHex()
+                        value = "030205a0".decodeHex()
                     ),
                     Extension(
-                        extnID = extendedKeyUsage,
+                        id = extendedKeyUsage,
                         critical = false,
-                        extnValue = "301406082b0601050507030106082b06010505070302".decodeHex()
+                        value = "301406082b0601050507030106082b06010505070302".decodeHex()
                     ),
                     Extension(
-                        extnID = authorityInfoAccess,
+                        id = authorityInfoAccess,
                         critical = false,
-                        extnValue = ("305a302306082b060105050730018617687474703a2f2f6f6373702e656" +
+                        value = ("305a302306082b060105050730018617687474703a2f2f6f6373702e656" +
                             "e74727573742e6e6574303306082b060105050730028627687474703a2f2f6169612" +
                             "e656e74727573742e6e65742f6c316d2d636861696e3235362e636572").decodeHex()
                     ),
                     Extension(
-                        extnID = crlDistributionPoints,
+                        id = crlDistributionPoints,
                         critical = false,
-                        extnValue = ("302a3028a026a0248622687474703a2f2f63726c2e656e74727573742e6" +
+                        value = ("302a3028a026a0248622687474703a2f2f63726c2e656e74727573742e6" +
                             "e65742f6c6576656c316d2e63726c").decodeHex()
                     ),
                     Extension(
-                        extnID = certificatePolicies,
+                        id = certificatePolicies,
                         critical = false,
-                        extnValue = ("30413036060a6086480186fa6c0a01023028302606082b0601050507020" +
+                        value = ("30413036060a6086480186fa6c0a01023028302606082b0601050507020" +
                             "1161a687474703a2f2f7777772e656e74727573742e6e65742f72706130070605678" +
                             "10c0101").decodeHex()
                     ),
                     Extension(
-                        extnID = authorityKeyIdentifier,
+                        id = authorityKeyIdentifier,
                         critical = false,
-                        extnValue = ("30168014c3f7d0b52a30adaf0d9121703954ddbc8970c73a").decodeHex()
+                        value = ("30168014c3f7d0b52a30adaf0d9121703954ddbc8970c73a").decodeHex()
                     ),
                     Extension(
-                        extnID = subjectKeyIdentifier,
+                        id = subjectKeyIdentifier,
                         critical = false,
-                        extnValue = "041475fd24c2df592599e32f3373e18c0450dd1b87b6".decodeHex()
+                        value = "041475fd24c2df592599e32f3373e18c0450dd1b87b6".decodeHex()
                     ),
                     Extension(
-                        extnID = basicConstraints,
+                        id = basicConstraints,
                         critical = false,
-                        extnValue = BasicConstraints(
+                        value = BasicConstraints(
                             ca = false,
-                            pathLenConstraint = null
+                            maxIntermediateCas = null
                         )
                     )
                 )
@@ -639,16 +645,20 @@ internal class DerCertificatesTest {
         .fromDer(certificateByteString)
 
     assertThat(okHttpCertificate.basicConstraints).isEqualTo(Extension(
+
         extnID = ObjectIdentifiers.basicConstraints,
+
         critical = true,
-        extnValue = BasicConstraints(true, 3)
+        value = BasicConstraints(true, 3)
     ))
     assertThat(okHttpCertificate.commonName).isEqualTo("Jurassic Park")
     assertThat(okHttpCertificate.organizationalUnitName).isEqualTo("Gene Research")
     assertThat(okHttpCertificate.subjectAlternativeNames).isEqualTo(Extension(
+
         extnID = ObjectIdentifiers.subjectAlternativeName,
         critical = true,
         extnValue = listOf(
+
             CertificateAdapters.generalNameDnsName to "*.example.com",
             CertificateAdapters.generalNameDnsName to "www.example.org"
         )
@@ -658,6 +668,7 @@ internal class DerCertificatesTest {
   }
 
   @Test
+
   fun `public key`() {
     val publicKeyBytes = ("MIGJAoGBAICkUeG2stqfbyr6gyiVm5pN9YEDRXlowi+rfYGyWhC7ouW9fXAnhgShQKMOU8" +
         "62mG3tcttSYGdsjM3z1crhQlUzpKqncrzwqbzPuAyt2t9Oib/bvjAvbl8gJH7IMRDl9RVgGYkApdkXVqgjSYigTH" +
@@ -674,7 +685,9 @@ internal class DerCertificatesTest {
         "mIE65swMM5/RNhS4aFjez/MwxFNOHaxc9VgCwYPXCLOtdf7AVovdyG0XWgbUXH+NyxKwboE").decodeBase64()!!
 
     val x509PublicKey = encodeKey(
+
         algorithm = "1.2.840.113549.1.1.1",
+
         publicKeyBytes = publicKeyBytes
     )
     val keyFactory = KeyFactory.getInstance("RSA")
@@ -694,11 +707,54 @@ internal class DerCertificatesTest {
         .isEqualTo(BitString(publicKeyBytes, 0))
   }
 
+
+  @Test fun `time before 2050 uses UTC_TIME`() {
+    val utcTimeDer = "170d3439313233313233353935395a".decodeHex()
+
+    val decoded = CertificateAdapters.time.fromDer(utcTimeDer)
+    val encoded = CertificateAdapters.time.toDer(decoded)
+
+    assertThat(decoded).isEqualTo(date("2049-12-31T23:59:59.000+0000").time)
+    assertThat(encoded).isEqualTo(utcTimeDer)
+  }
+
+  @Test fun `time not before 2050 uses GENERALIZED_TIME`() {
+    val generalizedTimeDer = "180f32303530303130313030303030305a".decodeHex()
+
+    val decoded = CertificateAdapters.time.fromDer(generalizedTimeDer)
+    val encoded = CertificateAdapters.time.toDer(decoded)
+
+    assertThat(decoded).isEqualTo(date("2050-01-01T00:00:00.000+0000").time)
+    assertThat(encoded).isEqualTo(generalizedTimeDer)
+  }
+
+  /**
+   * Conforming applications MUST be able to process validity dates that are encoded in either
+   * UTCTime or GeneralizedTime.
+   */
+  @Test fun `can read GENERALIZED_TIME before 2050`() {
+    val generalizedTimeDer = "180f32303439313233313233353935395a".decodeHex()
+
+    val decoded = CertificateAdapters.time.fromDer(generalizedTimeDer)
+    assertThat(decoded).isEqualTo(date("2049-12-31T23:59:59.000+0000").time)
+  }
+
+  @Test fun `time before 1950 uses GENERALIZED_TIME`() {
+    val generalizedTimeDer = "180f31393439313233313233353935395a".decodeHex()
+
+    val decoded = CertificateAdapters.time.fromDer(generalizedTimeDer)
+    val encoded = CertificateAdapters.time.toDer(decoded)
+
+    assertThat(decoded).isEqualTo(date("1949-12-31T23:59:59.000+0000").time)
+    assertThat(encoded).isEqualTo(generalizedTimeDer)
+  }
+
   @Test
   fun `reencode golden EC certificate`() {
-    val certificateByteString = ("MIIBkjCCATmgAwIBAgIBETAKBggqhkjOPQQDAjAwMRYwFAYDVQQLEw1HZW5lIFJ" +
-        "lc2VhcmNoMRYwFAYDVQQDEw1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlowMDE" +
-        "WMBQGA1UECxMNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAxMNSnVyYXNzaWMgUGFyazBZMBMGByqGSM49AgEGCCqGSM4" +
+    val certificateByteString = ("MIIBkjCCATmgAwIBAgIBETAKBggqhkjOPQQDAjAwMRYwFAYDVQQLDA1HZW5lIFJ" +
+        "lc2VhcmNoMRYwFAYDVQQDDA1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlowMDE" +
+        "WMBQGA1UECwwNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAwwNSnVyYXNzaWMgUGFyazBZMBMGByqGSM49AgEGCCqGSM4" +
+
         "9AwEHA0IABKzhiMzpN+BkUSPLIKItu6O2iao2Pd7dxrvPdIs4xv9/2tPCVgUxevZ27qRcqZOnSd31ZP6B04vkXag" +
         "/awy2/iujRDBCMBIGA1UdEwEB/wQIMAYBAf8CAQMwLAYDVR0RAQH/BCIwIIINKi5leGFtcGxlLmNvbYIPd3d3LmV" +
         "4YW1wbGUub3JnMAoGCCqGSM49BAMCA0cAMEQCIHzutN/uzViLBXZ0slMqO5oz7ghgBgDbgo2ZyroVeQ/KAiB6Vqo" +
@@ -712,9 +768,10 @@ internal class DerCertificatesTest {
 
   @Test
   fun `reencode golden RSA certificate`() {
-    val certificateByteString = ("MIIDHzCCAgegAwIBAgIBETANBgkqhkiG9w0BAQsFADAwMRYwFAYDVQQLEw1HZW5" +
-        "lIFJlc2VhcmNoMRYwFAYDVQQDEw1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlo" +
-        "wMDEWMBQGA1UECxMNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAxMNSnVyYXNzaWMgUGFyazCCASIwDQYJKoZIhvcNAQE" +
+
+    val certificateByteString = ("MIIDHzCCAgegAwIBAgIBETANBgkqhkiG9w0BAQsFADAwMRYwFAYDVQQLDA1HZW5" +
+        "lIFJlc2VhcmNoMRYwFAYDVQQDDA1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlo" +
+        "wMDEWMBQGA1UECwwNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAwwNSnVyYXNzaWMgUGFyazCCASIwDQYJKoZIhvcNAQE" +
         "BBQADggEPADCCAQoCggEBAMfROxfCzmxIX5bDSZt6hstXALVeiywFFzTLW5UI0eKSDCliojmiKBcGR5ln7gVe6/t" +
         "me35J9n+Xe5LLmRogMo1CxCoyJxuDX4RrTpPGSepJCrvsBaMA7bQXc/9SbckPF4DYGbE5j3L6IyFU++8RKep/xjc" +
         "FAK4yhEgriDh7Gb+sbG6Mv2qTO4p6TR9WhMKXhMgHdk1JYyaSsJ+tSruKiPVmMAcQLBWgNez6MUIC1WVDyvCvfXI" +
@@ -733,6 +790,30 @@ internal class DerCertificatesTest {
   }
 
   @Test
+
+  fun `private key info`() {
+    val privateKeyInfoByteString = ("MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAICkUeG2stqf" +
+        "byr6gyiVm5pN9YEDRXlowi+rfYGyWhC7ouW9fXAnhgShQKMOU862mG3tcttSYGdsjM3z1crhQlUzpKqncrzwqbzP" +
+        "uAyt2t9Oib/bvjAvbl8gJH7IMRDl9RVgGYkApdkXVqgjSYigTHTEWxCEgnrfu/YzEkO6l3rXAgMBAAECgYB99mhn" +
+        "B6piADOuddXv626NzUBTr4xbsYRTgSxHzwf50oFTTBSDuW+1IOBVyTWu94SSPyt0LllPbC8Di3sQSTnVGpSqAvEX" +
+        "knBMzIc0UO74Rn9p3gZjEenPt1l77fIBa2nK06/rdsJCoE/1P1JSfM9w7LU1RsTmseYMLeJl5F79gQJBAO/BbAKq" +
+        "g1yzK7VijygvBoUrr+rt2lbmKgcUQ/rxu8IIQk0M/xgJqSkXDXuOnboGM7sQSKfJAZUtT7xozvLzV7ECQQCJW59w" +
+        "7NIM0qZ/gIX2gcNZr1B/V3zcGlolTDciRm+fnKGNt2EEDKnVL3swzbEfTCa48IT0QKgZJqpXZERa26UHAkBLXmiP" +
+        "5f5pk8F3wcXzAeVw06z3k1IB41Tu6MX+CyPU+TeudRlz+wV8b0zDvK+EnRKCCbptVFj1Bkt8lQ4JfcnhAkAk2Y3G" +
+        "z+HySrkcT7Cg12M/NkdUQnZe3jr88pt/+IGNwomc6Wt/mJ4fcWONTkGMcfOZff1NQeNXDAZ6941XCsIVAkASOg02" +
+        "PlVHLidU7mIE65swMM5/RNhS4aFjez/MwxFNOHaxc9VgCwYPXCLOtdf7AVovdyG0XWgbUXH+NyxKwboE")
+        .decodeBase64()!!
+
+    val decoded = CertificateAdapters.privateKeyInfo.fromDer(privateKeyInfoByteString)
+
+    assertThat(decoded.version).isEqualTo(0L)
+    assertThat(decoded.algorithmIdentifier).isEqualTo(AlgorithmIdentifier(rsaEncryption, null))
+    assertThat(decoded.privateKey.size).isEqualTo(607)
+
+    val encoded = CertificateAdapters.privateKeyInfo.toDer(decoded)
+    assertThat(encoded).isEqualTo(privateKeyInfoByteString)
+  }
+
   fun `RSA issuer and signature`() {
     val root = HeldCertificate.Builder()
         .certificateAuthority(0)
@@ -793,6 +874,7 @@ internal class DerCertificatesTest {
     assertThat(okHttpCertificate.checkSignature(certificate.keyPair.public)).isFalse()
   }
 
+
   /** Converts public key bytes to SubjectPublicKeyInfo bytes. */
   private fun encodeKey(algorithm: String, publicKeyBytes: ByteString): ByteString {
     val subjectPublicKeyInfo = SubjectPublicKeyInfo(
@@ -808,5 +890,14 @@ internal class DerCertificatesTest {
         .write(this, 0, size - 1)
         .writeByte(this[size - 1].toInt() xor 1)
         .readByteString()
+
+  }
+
+  private fun date(s: String): Date {
+    return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").run {
+      timeZone = TimeZone.getTimeZone("GMT")
+      parse(s)
+    }
+
   }
 }

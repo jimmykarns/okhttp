@@ -17,11 +17,16 @@ package okhttp3.tls.internal.der
 
 import java.math.BigInteger
 
+import java.net.ProtocolException
+import okio.ByteString
+
+
 /**
  * ASN.1 adapters adapted from the specifications in [RFC 5280][rfc_5280].
  *
  * [rfc_5280]: https://tools.ietf.org/html/rfc5280
  */
+@Suppress("UNCHECKED_CAST") // This needs to cast decoded collections.
 internal object CertificateAdapters {
   /**
    * ```
@@ -30,11 +35,44 @@ internal object CertificateAdapters {
    *   generalTime    GeneralizedTime
    * }
    * ```
+   *
+   * RFC 5280, section 4.1.2.5:
+   *
+   * > CAs conforming to this profile MUST always encode certificate validity dates through the year
+   * > 2049 as UTCTime; certificate validity dates in 2050 or later MUST be encoded as
+   * > GeneralizedTime.
    */
-  internal val time = Adapters.choice(
-      Adapters.UTC_TIME,
-      Adapters.GENERALIZED_TIME
-  )
+  internal val time: DerAdapter<Long> = object : DerAdapter<Long> {
+    override fun matches(header: DerHeader): Boolean {
+      return Adapters.UTC_TIME.matches(header) || Adapters.GENERALIZED_TIME.matches(header)
+    }
+
+    override fun fromDer(reader: DerReader): Long {
+      val peekHeader = reader.peekHeader()
+          ?: throw ProtocolException("expected time but was exhausted at $reader")
+
+      return when {
+        peekHeader.tagClass == Adapters.UTC_TIME.tagClass &&
+            peekHeader.tag == Adapters.UTC_TIME.tag -> {
+          Adapters.UTC_TIME.fromDer(reader)
+        }
+        peekHeader.tagClass == Adapters.GENERALIZED_TIME.tagClass &&
+            peekHeader.tag == Adapters.GENERALIZED_TIME.tag -> {
+          Adapters.GENERALIZED_TIME.fromDer(reader)
+        }
+        else -> throw ProtocolException("expected time but was $peekHeader at $reader")
+      }
+    }
+
+    override fun toDer(writer: DerWriter, value: Long) {
+      // [1950-01-01T00:00:00..2050-01-01T00:00:00Z)
+      if (value in -631_152_000_000L until 2_524_608_000_000L) {
+        Adapters.UTC_TIME.toDer(writer, value)
+      } else {
+        Adapters.GENERALIZED_TIME.toDer(writer, value)
+      }
+    }
+  }
 
   /**
    * ```
@@ -44,26 +82,30 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val validity = Adapters.sequence(
+  private val validity: BasicDerAdapter<Validity> = Adapters.sequence(
       "Validity",
       time,
       time,
       decompose = {
         listOf(
+
             // TODO(jwilson): when to use GENERALIZED_TIME? It will still work in 2050.
             Adapters.UTC_TIME to it.notBefore,
             Adapters.UTC_TIME to it.notAfter
+
         )
       },
       construct = {
         Validity(
-            notBefore = (it[0] as Pair<*, *>).second as Long,
-            notAfter = (it[1] as Pair<*, *>).second as Long
+            notBefore = it[0] as Long,
+            notAfter = it[1] as Long
         )
       }
   )
 
+
   val algorithmParameters = Adapters.usingTypeHint { typeHint ->
+
     when (typeHint) {
       // This type is pretty strange. The spec says that for certain algorithms we must encode null
       // when it is present, and for others we must omit it!
@@ -83,12 +125,14 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val algorithmIdentifier = Adapters.sequence(
+  internal val algorithmIdentifier: BasicDerAdapter<AlgorithmIdentifier> = Adapters.sequence(
       "AlgorithmIdentifier",
       Adapters.OBJECT_IDENTIFIER.asTypeHint(),
       algorithmParameters,
+
       decompose = { listOf(it.algorithm, it.parameters) },
       construct = { AlgorithmIdentifier(it[0] as String, it[1]) }
+
   )
 
   /**
@@ -99,12 +143,22 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val basicConstraints = Adapters.sequence(
+  private val basicConstraints: BasicDerAdapter<BasicConstraints> = Adapters.sequence(
       "BasicConstraints",
       Adapters.BOOLEAN.optional(defaultValue = false),
       Adapters.INTEGER_AS_LONG.optional(),
-      decompose = { listOf(it.ca, it.pathLenConstraint) },
-      construct = { BasicConstraints(it[0] as Boolean, it[1] as Long?) }
+      decompose = {
+        listOf(
+            it.ca,
+            it.maxIntermediateCas
+        )
+      },
+      construct = {
+        BasicConstraints(
+            ca = it[0] as Boolean,
+            maxIntermediateCas = it[1] as Long?
+        )
+      }
   )
 
   /**
@@ -123,12 +177,15 @@ internal object CertificateAdapters {
    *   registeredID                    [8]     OBJECT IDENTIFIER
    * }
    * ```
+   *
+   * The first property of the pair is the adapter that was used, the second property is the value.
    */
   internal val generalNameDnsName = Adapters.IA5_STRING.withTag(tag = 2L)
   internal val generalNameIpAddress = Adapters.OCTET_STRING.withTag(tag = 7L)
-  internal val generalName = Adapters.choice(
+  internal val generalName: DerAdapter<Pair<DerAdapter<*>, Any?>> = Adapters.choice(
       generalNameDnsName,
-      generalNameIpAddress
+      generalNameIpAddress,
+      Adapters.ANY_VALUE
   )
 
   /**
@@ -138,13 +195,15 @@ internal object CertificateAdapters {
    * GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
    * ```
    */
+
   internal val subjectAlternativeName = generalName.asSequenceOf()
+
 
   /**
    * This uses the preceding extension ID to select which adapter to use for the extension value
    * that follows.
    */
-  internal val extensionValue = Adapters.usingTypeHint { typeHint ->
+  private val extensionValue: BasicDerAdapter<Any?> = Adapters.usingTypeHint { typeHint ->
     when (typeHint) {
       ObjectIdentifiers.subjectAlternativeName -> subjectAlternativeName
       ObjectIdentifiers.basicConstraints -> basicConstraints
@@ -168,13 +227,25 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val extension = Adapters.sequence(
+  internal val extension: BasicDerAdapter<Extension> = Adapters.sequence(
       "Extension",
       Adapters.OBJECT_IDENTIFIER.asTypeHint(),
       Adapters.BOOLEAN.optional(defaultValue = false),
       extensionValue,
-      decompose = { listOf(it.extnID, it.critical, it.extnValue) },
-      construct = { Extension(it[0] as String, it[1] as Boolean, it[2]) }
+      decompose = {
+        listOf(
+            it.id,
+            it.critical,
+            it.value
+        )
+      },
+      construct = {
+        Extension(
+            id = it[0] as String,
+            critical = it[1] as Boolean,
+            value = it[2]
+        )
+      }
   )
 
   /**
@@ -189,12 +260,26 @@ internal object CertificateAdapters {
    * AttributeValue ::= ANY -- DEFINED BY AttributeType
    * ```
    */
-  internal val attributeTypeAndValue = Adapters.sequence(
+  private val attributeTypeAndValue: BasicDerAdapter<AttributeTypeAndValue> = Adapters.sequence(
       "AttributeTypeAndValue",
       Adapters.OBJECT_IDENTIFIER,
-      Adapters.any(),
-      decompose = { listOf(it.type, it.value) },
-      construct = { AttributeTypeAndValue(it[0] as String, it[1]) }
+      Adapters.any(
+          String::class to Adapters.UTF8_STRING,
+          Nothing::class to Adapters.PRINTABLE_STRING,
+          AnyValue::class to Adapters.ANY_VALUE
+      ),
+      decompose = {
+        listOf(
+            it.type,
+            it.value
+        )
+      },
+      construct = {
+        AttributeTypeAndValue(
+            type = it[0] as String,
+            value = it[1]
+        )
+      }
   )
 
   /**
@@ -204,7 +289,8 @@ internal object CertificateAdapters {
    * RelativeDistinguishedName ::= SET SIZE (1..MAX) OF AttributeTypeAndValue
    * ```
    */
-  internal val rdnSequence = attributeTypeAndValue.asSetOf().asSequenceOf()
+  internal val rdnSequence: BasicDerAdapter<List<List<AttributeTypeAndValue>>> =
+    attributeTypeAndValue.asSetOf().asSequenceOf()
 
   /**
    * ```
@@ -214,7 +300,7 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val name = Adapters.choice(
+  internal val name: DerAdapter<Pair<DerAdapter<*>, Any?>> = Adapters.choice(
       rdnSequence
   )
 
@@ -226,12 +312,22 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val subjectPublicKeyInfo = Adapters.sequence(
+  internal val subjectPublicKeyInfo: BasicDerAdapter<SubjectPublicKeyInfo> = Adapters.sequence(
       "SubjectPublicKeyInfo",
       algorithmIdentifier,
       Adapters.BIT_STRING,
-      decompose = { listOf(it.algorithm, it.subjectPublicKey) },
-      construct = { SubjectPublicKeyInfo(it[0] as AlgorithmIdentifier, it[1] as BitString) }
+      decompose = {
+        listOf(
+            it.algorithm,
+            it.subjectPublicKey
+        )
+      },
+      construct = {
+        SubjectPublicKeyInfo(
+            algorithm = it[0] as AlgorithmIdentifier,
+            subjectPublicKey = it[1] as BitString
+        )
+      }
   )
 
   /**
@@ -250,7 +346,7 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val tbsCertificate = Adapters.sequence(
+  internal val tbsCertificate: BasicDerAdapter<TbsCertificate> = Adapters.sequence(
       "TBSCertificate",
       Adapters.INTEGER_AS_LONG.withExplicitBox(tag = 0L).optional(defaultValue = 0), // v1 == 0
       Adapters.INTEGER_AS_BIG_INTEGER,
@@ -301,7 +397,7 @@ internal object CertificateAdapters {
    * }
    * ```
    */
-  internal val certificate = Adapters.sequence(
+  internal val certificate: BasicDerAdapter<Certificate> = Adapters.sequence(
       "Certificate",
       tbsCertificate,
       algorithmIdentifier,
@@ -318,6 +414,48 @@ internal object CertificateAdapters {
             tbsCertificate = it[0] as TbsCertificate,
             signatureAlgorithm = it[1] as AlgorithmIdentifier,
             signatureValue = it[2] as BitString
+        )
+      }
+  )
+
+  /**
+   * ```
+   * Version ::= INTEGER { v1(0), v2(1) } (v1, ..., v2)
+   *
+   * PrivateKeyAlgorithmIdentifier ::= AlgorithmIdentifier
+   *
+   * PrivateKey ::= OCTET STRING
+   *
+   * OneAsymmetricKey ::= SEQUENCE {
+   *   version                   Version,
+   *   privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+   *   privateKey                PrivateKey,
+   *   attributes            [0] Attributes OPTIONAL,
+   *   ...,
+   *   [[2: publicKey        [1] PublicKey OPTIONAL ]],
+   *   ...
+   * }
+   *
+   * PrivateKeyInfo ::= OneAsymmetricKey
+   * ```
+   */
+  internal val privateKeyInfo: BasicDerAdapter<PrivateKeyInfo> = Adapters.sequence(
+      "PrivateKeyInfo",
+      Adapters.INTEGER_AS_LONG,
+      algorithmIdentifier,
+      Adapters.OCTET_STRING,
+      decompose = {
+        listOf(
+            it.version,
+            it.algorithmIdentifier,
+            it.privateKey
+        )
+      },
+      construct = {
+        PrivateKeyInfo(
+            version = it[0] as Long,
+            algorithmIdentifier = it[1] as AlgorithmIdentifier,
+            privateKey = it[2] as ByteString
         )
       }
   )

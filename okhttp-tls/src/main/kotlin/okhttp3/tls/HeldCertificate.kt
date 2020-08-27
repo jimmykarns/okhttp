@@ -43,12 +43,20 @@ import okhttp3.tls.internal.der.CertificateAdapters.generalNameDnsName
 import okhttp3.tls.internal.der.CertificateAdapters.generalNameIpAddress
 import okhttp3.tls.internal.der.Extension
 import okhttp3.tls.internal.der.ObjectIdentifiers
+import okhttp3.tls.internal.der.ObjectIdentifiers.basicConstraints
+import okhttp3.tls.internal.der.ObjectIdentifiers.organizationalUnitName
+import okhttp3.tls.internal.der.ObjectIdentifiers.sha256WithRSAEncryption
+import okhttp3.tls.internal.der.ObjectIdentifiers.sha256withEcdsa
+import okhttp3.tls.internal.der.ObjectIdentifiers.subjectAlternativeName
+
 import okhttp3.tls.internal.der.TbsCertificate
 import okhttp3.tls.internal.der.Validity
 import okio.ByteString
 import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.toByteString
+
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
+
 
 /**
  * A certificate and its private key. These are some properties of certificates that are used with
@@ -178,16 +186,16 @@ class HeldCertificate(
   }
 
   private fun pkcs1Bytes(): ByteString {
-    val privateKeyInfo = PrivateKeyInfo.getInstance(keyPair.private.encoded)
-    return privateKeyInfo.parsePrivateKey().toASN1Primitive().encoded.toByteString()
+    val decoded = CertificateAdapters.privateKeyInfo.fromDer(keyPair.private.encoded.toByteString())
+    return decoded.privateKey
   }
 
   /** Build a held certificate with reasonable defaults. */
   class Builder {
     private var notBefore = -1L
     private var notAfter = -1L
-    private var cn: String? = null
-    private var ou: String? = null
+    private var commonName: String? = null
+    private var organizationalUnit: String? = null
     private val altNames = mutableListOf<String>()
     private var serialNumber: BigInteger? = null
     private var keyPair: KeyPair? = null
@@ -239,12 +247,12 @@ class HeldCertificate(
      * [rfc_2818]: https://tools.ietf.org/html/rfc2818
      */
     fun commonName(cn: String) = apply {
-      this.cn = cn
+      this.commonName = cn
     }
 
     /** Sets the certificate's organizational unit (OU). If unset this field will be omitted. */
     fun organizationalUnit(ou: String) = apply {
-      this.ou = ou
+      this.organizationalUnit = ou
     }
 
     /** Sets this certificate's serial number. If unset the serial number will be 1. */
@@ -337,6 +345,7 @@ class HeldCertificate(
       } else {
         issuerKeyPair = subjectKeyPair
         issuer = subject
+
       }
       val signatureAlgorithm = signatureAlgorithm(issuerKeyPair)
 
@@ -361,6 +370,7 @@ class HeldCertificate(
         sign().toByteString()
       }
 
+
       // Complete signed certificate.
       val certificate = Certificate(
           tbsCertificate = tbsCertificate,
@@ -377,16 +387,20 @@ class HeldCertificate(
     private fun subject(): List<List<AttributeTypeAndValue>> {
       val result = mutableListOf<List<AttributeTypeAndValue>>()
 
+
       if (ou != null) {
         result += listOf(AttributeTypeAndValue(
             type = ObjectIdentifiers.organizationalUnitName,
             value = ou
+
         ))
       }
 
       result += listOf(AttributeTypeAndValue(
           type = ObjectIdentifiers.commonName,
+
           value = cn ?: UUID.randomUUID().toString()
+
       ))
 
       return result
@@ -406,11 +420,13 @@ class HeldCertificate(
 
       if (maxIntermediateCas != -1) {
         result += Extension(
+
             extnID = ObjectIdentifiers.basicConstraints,
             critical = true,
             extnValue = BasicConstraints(
                 ca = true,
                 pathLenConstraint = 3
+
             )
         )
       }
@@ -427,9 +443,11 @@ class HeldCertificate(
           }
         }
         result += Extension(
+ jwilson.0627.roundtrip
             extnID = ObjectIdentifiers.subjectAlternativeName,
             critical = true,
             extnValue = extensionValue
+
         )
       }
 
@@ -439,20 +457,23 @@ class HeldCertificate(
     private fun signatureAlgorithm(signedByKeyPair: KeyPair): AlgorithmIdentifier {
       return when (signedByKeyPair.private) {
         is RSAPrivateKey -> AlgorithmIdentifier(
+
             algorithm = ObjectIdentifiers.sha256WithRSAEncryption,
             parameters = null
         )
         else -> AlgorithmIdentifier(
             algorithm = ObjectIdentifiers.sha256withEcdsa,
+
             parameters = ByteString.EMPTY
         )
       }
     }
 
     private fun generateKeyPair(): KeyPair {
-      val keyPairGenerator = KeyPairGenerator.getInstance(keyAlgorithm)
-      keyPairGenerator.initialize(keySize, SecureRandom())
-      return keyPairGenerator.generateKeyPair()
+      return KeyPairGenerator.getInstance(keyAlgorithm).run {
+        initialize(keySize, SecureRandom())
+        generateKeyPair()
+      }
     }
 
     companion object {
