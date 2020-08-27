@@ -13,6 +13,8 @@
         <meta name="description" content="An HTTP & HTTP/2 client for Android and Java applications">
       
       
+        <link rel="canonical" href="https://square.github.com/okhttp/concurrency/">
+      
       
         <meta name="author" content="Square, Inc.">
       
@@ -35,8 +37,8 @@
       
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
-      <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.4.0">
+      <link rel="shortcut icon" href="../images/icon-square.png">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.6.0">
     
     
       
@@ -44,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/application.0284f74d.css">
+      <link rel="stylesheet" href="../assets/stylesheets/application.1b62728e.css">
       
-        <link rel="stylesheet" href="../assets/stylesheets/application-palette.01803549.css">
+        <link rel="stylesheet" href="../assets/stylesheets/application-palette.a8b3c06d.css">
       
       
         
@@ -55,12 +57,12 @@
       
     
     
-      <script src="../assets/javascripts/modernizr.74668098.js"></script>
+      <script src="../assets/javascripts/modernizr.268332fc.js"></script>
     
     
       
         <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono&display=fallback">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
       
     
@@ -100,7 +102,7 @@
   <nav class="md-header-nav md-grid">
     <div class="md-flex">
       <div class="md-flex__cell md-flex__cell--shrink">
-        <a href="../api/okhttp/okhttp3/" title="OkHttp" class="md-header-nav__button md-logo">
+        <a href="https://square.github.com/okhttp/" title="OkHttp" class="md-header-nav__button md-logo">
           
             <img src="../images/icon-square.png" width="24" height="24">
           
@@ -183,7 +185,7 @@
         
       
       
-      <main class="md-main">
+      <main class="md-main" role="main">
         <div class="md-main__inner md-grid" data-md-component="container">
           
             
@@ -192,7 +194,7 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href="../api/okhttp/okhttp3/" title="OkHttp" class="md-nav__button md-logo">
+    <a href="https://square.github.com/okhttp/" title="OkHttp" class="md-nav__button md-logo">
       
         <img src="../images/icon-square.png" width="48" height="48">
       
@@ -228,6 +230,30 @@
 
 
   <li class="md-nav__item">
+    <a href=".." title="Overview" class="md-nav__link">
+      Overview
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="https://stackoverflow.com/questions/tagged/okhttp?sort=active" title="Stack Overflow ⏏" class="md-nav__link">
+      Stack Overflow ⏏
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
     <a href="../calls/" title="Calls" class="md-nav__link">
       Calls
     </a>
@@ -238,185 +264,11 @@
       
       
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    
-      
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="__toc">
-        Concurrency
-      </label>
-    
-    <a href="./" title="Concurrency" class="md-nav__link md-nav__link--active">
-      Concurrency
+  <li class="md-nav__item">
+    <a href="../caching/" title="Caching" class="md-nav__link">
+      Caching
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary">
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#http2-connections" title="HTTP/2 Connections" class="md-nav__link">
-    HTTP/2 Connections
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#blocking-apis" title="Blocking APIs" class="md-nav__link">
-    Blocking APIs
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#framed-protocols" title="Framed protocols" class="md-nav__link">
-    Framed protocols
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#threads" title="Threads" class="md-nav__link">
-    Threads
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#applications-calling-thread" title="Application's calling thread" class="md-nav__link">
-    Application's calling thread
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#shared-reader-thread" title="Shared reader thread" class="md-nav__link">
-    Shared reader thread
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#do-stuff-later-pool" title="Do-stuff-later pool" class="md-nav__link">
-    Do-stuff-later pool
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#locks" title="Locks" class="md-nav__link">
-    Locks
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#http2connection" title="Http2Connection" class="md-nav__link">
-    Http2Connection
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#http2stream" title="Http2Stream" class="md-nav__link">
-    Http2Stream
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#http2writer" title="Http2Writer" class="md-nav__link">
-    Http2Writer
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#holding-multiple-locks" title="Holding multiple locks" class="md-nav__link">
-    Holding multiple locks
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-pool" title="Connection Pool" class="md-nav__link">
-    Connection Pool
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#background" title="Background" class="md-nav__link">
-    Background
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connectionpool-realconnection-and-streamallocation" title="ConnectionPool, RealConnection, and StreamAllocation" class="md-nav__link">
-    ConnectionPool, RealConnection, and StreamAllocation
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#locks_1" title="Locks" class="md-nav__link">
-    Locks
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connectionpool" title="ConnectionPool" class="md-nav__link">
-    ConnectionPool
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
     
@@ -450,8 +302,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../https/" title="Https" class="md-nav__link">
-      Https
+    <a href="../https/" title="HTTPS" class="md-nav__link">
+      HTTPS
     </a>
   </li>
 
@@ -498,20 +350,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../tls_configuration_history/" title="TLS Configuration History" class="md-nav__link">
-      TLS Configuration History
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
-    <a href="../upgrading_to_okhttp_4/" title="Upgrading to OkHttp 4" class="md-nav__link">
-      Upgrading to OkHttp 4
+    <a href="../security_providers/" title="Security Providers" class="md-nav__link">
+      Security Providers
     </a>
   </li>
 
@@ -534,8 +374,248 @@
 
 
   <li class="md-nav__item">
-    <a href="https://stackoverflow.com/questions/tagged/okhttp?sort=active" title="Stack Overflow" class="md-nav__link">
-      Stack Overflow
+    <a href="../upgrading_to_okhttp_4/" title="Upgrading to OkHttp 4" class="md-nav__link">
+      Upgrading to OkHttp 4
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-14" type="checkbox" id="nav-14">
+    
+    <label class="md-nav__link" for="nav-14">
+      4.x API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-14">
+        4.x API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp/okhttp3/" title="okhttp" class="md-nav__link">
+      okhttp
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-brotli/okhttp3.brotli/" title="brotli" class="md-nav__link">
+      brotli
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-dnsoverhttps/okhttp3.dnsoverhttps/" title="dnsoverhttps" class="md-nav__link">
+      dnsoverhttps
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-logging-interceptor/okhttp3.logging/" title="logging-interceptor" class="md-nav__link">
+      logging-interceptor
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-sse/okhttp3.sse/" title="sse" class="md-nav__link">
+      sse
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-tls/okhttp3.tls/" title="tls" class="md-nav__link">
+      tls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-urlconnection/okhttp3/" title="urlconnection" class="md-nav__link">
+      urlconnection
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/mockwebserver/okhttp3.mockwebserver/" title="mockwebserver" class="md-nav__link">
+      mockwebserver
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-15" type="checkbox" id="nav-15">
+    
+    <label class="md-nav__link" for="nav-15">
+      3.12.x API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-15">
+        3.12.x API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp/" title="okhttp ⏏" class="md-nav__link">
+      okhttp ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-dnsoverhttps/" title="dnsoverhttps ⏏" class="md-nav__link">
+      dnsoverhttps ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/logging-interceptor/" title="logging-interceptor ⏏" class="md-nav__link">
+      logging-interceptor ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-sse/" title="sse ⏏" class="md-nav__link">
+      sse ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-tls/" title="tls ⏏" class="md-nav__link">
+      tls ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-urlconnection/" title="urlconnection ⏏" class="md-nav__link">
+      urlconnection ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/mockwebserver/" title="mockwebserver ⏏" class="md-nav__link">
+      mockwebserver ⏏
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../changelog/" title="Change Log" class="md-nav__link">
+      Change Log
     </a>
   </li>
 
@@ -546,8 +626,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../api/okhttp/okhttp3/" title="API Docs" class="md-nav__link">
-      API Docs
+    <a href="../contributing/" title="Contributing" class="md-nav__link">
+      Contributing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../code_of_conduct/" title="Code of Conduct" class="md-nav__link">
+      Code of Conduct
     </a>
   </li>
 
@@ -573,7 +665,7 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#http2-connections" title="HTTP/2 Connections" class="md-nav__link">
+  <a href="#http2-connections" class="md-nav__link">
     HTTP/2 Connections
   </a>
   
@@ -581,21 +673,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#blocking-apis" title="Blocking APIs" class="md-nav__link">
+  <a href="#blocking-apis" class="md-nav__link">
     Blocking APIs
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#framed-protocols" title="Framed protocols" class="md-nav__link">
+  <a href="#framed-protocols" class="md-nav__link">
     Framed protocols
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#threads" title="Threads" class="md-nav__link">
+  <a href="#threads" class="md-nav__link">
     Threads
   </a>
   
@@ -603,21 +695,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#applications-calling-thread" title="Application's calling thread" class="md-nav__link">
+  <a href="#applications-calling-thread" class="md-nav__link">
     Application's calling thread
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#shared-reader-thread" title="Shared reader thread" class="md-nav__link">
+  <a href="#shared-reader-thread" class="md-nav__link">
     Shared reader thread
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#do-stuff-later-pool" title="Do-stuff-later pool" class="md-nav__link">
+  <a href="#do-stuff-later-pool" class="md-nav__link">
     Do-stuff-later pool
   </a>
   
@@ -629,7 +721,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#locks" title="Locks" class="md-nav__link">
+  <a href="#locks" class="md-nav__link">
     Locks
   </a>
   
@@ -637,21 +729,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#http2connection" title="Http2Connection" class="md-nav__link">
+  <a href="#http2connection" class="md-nav__link">
     Http2Connection
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#http2stream" title="Http2Stream" class="md-nav__link">
+  <a href="#http2stream" class="md-nav__link">
     Http2Stream
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#http2writer" title="Http2Writer" class="md-nav__link">
+  <a href="#http2writer" class="md-nav__link">
     Http2Writer
   </a>
   
@@ -663,7 +755,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#holding-multiple-locks" title="Holding multiple locks" class="md-nav__link">
+  <a href="#holding-multiple-locks" class="md-nav__link">
     Holding multiple locks
   </a>
   
@@ -675,7 +767,7 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#connection-pool" title="Connection Pool" class="md-nav__link">
+  <a href="#connection-pool" class="md-nav__link">
     Connection Pool
   </a>
   
@@ -683,29 +775,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#background" title="Background" class="md-nav__link">
-    Background
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connectionpool-realconnection-and-streamallocation" title="ConnectionPool, RealConnection, and StreamAllocation" class="md-nav__link">
-    ConnectionPool, RealConnection, and StreamAllocation
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#locks_1" title="Locks" class="md-nav__link">
-    Locks
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connectionpool" title="ConnectionPool" class="md-nav__link">
-    ConnectionPool
+  <a href="#per-connection-locks" class="md-nav__link">
+    Per-Connection Locks
   </a>
   
 </li>
@@ -769,22 +840,31 @@
 <p>You&rsquo;re allowed to take the Http2Connection lock while holding the Http2Writer lock. But not vice-versa. Because taking the Http2Writer lock can block.</p>
 <p>This is necessary for bookkeeping when creating new streams. Correct framing requires that stream IDs are sequential on the socket, so we need to bundle assigning the ID with sending the <code>SYN_STREAM</code> frame.</p>
 <h2 id="connection-pool">Connection Pool<a class="headerlink" href="#connection-pool" title="Permanent link">&para;</a></h2>
-<h3 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h3>
 <p>A primary responsibility for any HTTP client is to efficiently manage network connections. Creating and establishing new connections require a fair amount of overhead and added latency. OkHttp will make every effort to reuse existing connections to avoid this overhead and added latency.</p>
-<p>Every OkHttpClient uses a connection pool. Its job is to maintain a reference to all open connections. When an HTTP request is started, OkHttp will attempt to reuse an existing connection from the pool. If there are no existing connections, a new one is created and put into the connection pool. For http/2, the connection can be reused immediately. For http/1, the request must be completed before it can be reused.</p>
-<p>Since HTTP requests frequently happen in parallel, the connection pool implementation must be thread-safe.</p>
-<h3 id="connectionpool-realconnection-and-streamallocation">ConnectionPool, RealConnection, and StreamAllocation<a class="headerlink" href="#connectionpool-realconnection-and-streamallocation" title="Permanent link">&para;</a></h3>
-<p>The primary classes involved with establishing, sharing and terminating connections are ConnectionPool, RealConnection and StreamAllocation.</p>
-<p><strong>ConnectionPool</strong>: Manages reuse of HTTP and HTTP/2 connections for reduced latency. Every OkHttpClient has one, and its lifetime spans the lifetime of the OkHttpClient.</p>
-<p><strong>RealConnection</strong>: The socket and streams of an HTTP and HTTP/2 connection. These are created on demand to fulfill HTTP requests. They may be reused for many HTTP request/response exchanges. Their lifetime is typically shorter than ConnectionPool.</p>
-<p><strong>StreamAllocation</strong>: Coordinates the relationship between connections, streams and calls. These are created for a single HTTP request/response exchange. Their lifetime is typically shorter than RealConnection.</p>
-<h3 id="locks_1">Locks<a class="headerlink" href="#locks_1" title="Permanent link">&para;</a></h3>
-<p>A single lock is used to synchronize and guard the state of ConnectionPool, RealConnection and StreamAllocation.</p>
-<h3 id="connectionpool">ConnectionPool<a class="headerlink" href="#connectionpool" title="Permanent link">&para;</a></h3>
-<p>The fields in ConnectionPool, RealConnection and StreamAllocation are all guarded by the connection pool instance. This lock is never held while doing I/O (even closing a socket) to prevent contention.</p>
-<p>A single lock is preferred to avoid deadlock scenarios and the added overhead of aggregate lock/unlock that would occur if multiple locks were used.</p>
+<p>Every OkHttpClient uses a connection pool. Its job is to maintain a reference to all open connections. When an HTTP request is started, OkHttp will attempt to reuse an existing connection from the pool. If there are no existing connections, a new one is created and put into the connection pool. For HTTP/2, the connection can be reused immediately. For HTTP/1, the request must be completed before it can be reused.</p>
+<p>Since HTTP requests frequently happen in parallel, connection pooling must be thread-safe.</p>
+<p>These are the primary classes involved with establishing, sharing, and terminating connections:</p>
+<ul>
+<li>
+<p><strong>RealConnectionPool</strong> manages reuse of HTTP and HTTP/2 connections for reduced latency. Every OkHttpClient has one, and its lifetime spans the lifetime of the OkHttpClient.</p>
+</li>
+<li>
+<p><strong>RealConnection</strong> is the socket and streams of an HTTP/1 or HTTP/2 connection. These are created on demand to fulfill HTTP requests. They may be reused for many HTTP request/response exchanges. Their lifetime is typically shorter than a connection pool.</p>
+</li>
+<li>
+<p><strong>Exchange</strong> carries a single HTTP request/response pair.</p>
+</li>
+<li>
+<p><strong>ExchangeFinder</strong> chooses which connection carries each exchange. Where possible it will use the same connection for all exchanges in a single call. It prefers reusing pooled connections over establishing new connections.      </p>
+</li>
+</ul>
+<h4 id="per-connection-locks">Per-Connection Locks<a class="headerlink" href="#per-connection-locks" title="Permanent link">&para;</a></h4>
+<p>Each connection has its own lock. The connections in the pool are all in a <code>ConcurrentLinkedQueue</code>. Due to data races, iterators of this queue may return removed connections. Callers must check the connection&rsquo;s <code>noNewExchanges</code> property before using connections from the pool.</p>
+<p>The connection lock is never held while doing I/O (even closing a socket) to prevent contention.</p>
+<p>A lock-per-connection is used to maximize concurrency.</p>
                 
                   
+                
                 
               
               
@@ -800,47 +880,12 @@
         
 <footer class="md-footer">
   
-    <div class="md-footer-nav">
-      <nav class="md-footer-nav__inner md-grid">
-        
-          <a href="../calls/" title="Calls" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
-            <div class="md-flex__cell md-flex__cell--shrink">
-              <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
-            </div>
-            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
-              <span class="md-flex__ellipsis">
-                <span class="md-footer-nav__direction">
-                  Previous
-                </span>
-                Calls
-              </span>
-            </div>
-          </a>
-        
-        
-          <a href="../connections/" title="Connections" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
-            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
-              <span class="md-flex__ellipsis">
-                <span class="md-footer-nav__direction">
-                  Next
-                </span>
-                Connections
-              </span>
-            </div>
-            <div class="md-flex__cell md-flex__cell--shrink">
-              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
-            </div>
-          </a>
-        
-      </nav>
-    </div>
-  
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-footer-copyright">
         
           <div class="md-footer-copyright__highlight">
-            Copyright &copy; 2016 Square, Inc.
+            Copyright &copy; 2019 Square, Inc.
           </div>
         
         powered by
@@ -856,7 +901,7 @@
       
     </div>
     
-      <script src="../assets/javascripts/application.245445c6.js"></script>
+      <script src="../assets/javascripts/application.808e90bb.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:".."}})</script>
       

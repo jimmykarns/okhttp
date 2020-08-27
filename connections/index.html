@@ -13,6 +13,8 @@
         <meta name="description" content="An HTTP & HTTP/2 client for Android and Java applications">
       
       
+        <link rel="canonical" href="https://square.github.com/okhttp/connections/">
+      
       
         <meta name="author" content="Square, Inc.">
       
@@ -35,8 +37,8 @@
       
         <meta name="lang:search.tokenizer" content="[\s\-]+">
       
-      <link rel="shortcut icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.4.0">
+      <link rel="shortcut icon" href="../images/icon-square.png">
+      <meta name="generator" content="mkdocs-1.0.4, mkdocs-material-4.6.0">
     
     
       
@@ -44,9 +46,9 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/application.0284f74d.css">
+      <link rel="stylesheet" href="../assets/stylesheets/application.1b62728e.css">
       
-        <link rel="stylesheet" href="../assets/stylesheets/application-palette.01803549.css">
+        <link rel="stylesheet" href="../assets/stylesheets/application-palette.a8b3c06d.css">
       
       
         
@@ -55,12 +57,12 @@
       
     
     
-      <script src="../assets/javascripts/modernizr.74668098.js"></script>
+      <script src="../assets/javascripts/modernizr.268332fc.js"></script>
     
     
       
         <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Roboto+Mono&display=fallback">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
         <style>body,input{font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono","Courier New",Courier,monospace}</style>
       
     
@@ -100,7 +102,7 @@
   <nav class="md-header-nav md-grid">
     <div class="md-flex">
       <div class="md-flex__cell md-flex__cell--shrink">
-        <a href="../api/okhttp/okhttp3/" title="OkHttp" class="md-header-nav__button md-logo">
+        <a href="https://square.github.com/okhttp/" title="OkHttp" class="md-header-nav__button md-logo">
           
             <img src="../images/icon-square.png" width="24" height="24">
           
@@ -183,7 +185,7 @@
         
       
       
-      <main class="md-main">
+      <main class="md-main" role="main">
         <div class="md-main__inner md-grid" data-md-component="container">
           
             
@@ -192,7 +194,7 @@
                   <div class="md-sidebar__inner">
                     <nav class="md-nav md-nav--primary" data-md-level="0">
   <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href="../api/okhttp/okhttp3/" title="OkHttp" class="md-nav__button md-logo">
+    <a href="https://square.github.com/okhttp/" title="OkHttp" class="md-nav__button md-logo">
       
         <img src="../images/icon-square.png" width="48" height="48">
       
@@ -228,6 +230,30 @@
 
 
   <li class="md-nav__item">
+    <a href=".." title="Overview" class="md-nav__link">
+      Overview
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="https://stackoverflow.com/questions/tagged/okhttp?sort=active" title="Stack Overflow ⏏" class="md-nav__link">
+      Stack Overflow ⏏
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
     <a href="../calls/" title="Calls" class="md-nav__link">
       Calls
     </a>
@@ -240,8 +266,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../concurrency/" title="Concurrency" class="md-nav__link">
-      Concurrency
+    <a href="../caching/" title="Caching" class="md-nav__link">
+      Caching
     </a>
   </li>
 
@@ -279,28 +305,28 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#urls" title="URLs" class="md-nav__link">
+  <a href="#urls" class="md-nav__link">
     URLs
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#addresses" title="Addresses" class="md-nav__link">
+  <a href="#addresses" class="md-nav__link">
     Addresses
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#routes" title="Routes" class="md-nav__link">
+  <a href="#routes" class="md-nav__link">
     Routes
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#connections_1" title="Connections" class="md-nav__link">
+  <a href="#connections_1" class="md-nav__link">
     Connections
   </a>
   
@@ -335,8 +361,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../https/" title="Https" class="md-nav__link">
-      Https
+    <a href="../https/" title="HTTPS" class="md-nav__link">
+      HTTPS
     </a>
   </li>
 
@@ -383,20 +409,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../tls_configuration_history/" title="TLS Configuration History" class="md-nav__link">
-      TLS Configuration History
-    </a>
-  </li>
-
-    
-      
-      
-      
-
-
-  <li class="md-nav__item">
-    <a href="../upgrading_to_okhttp_4/" title="Upgrading to OkHttp 4" class="md-nav__link">
-      Upgrading to OkHttp 4
+    <a href="../security_providers/" title="Security Providers" class="md-nav__link">
+      Security Providers
     </a>
   </li>
 
@@ -419,8 +433,248 @@
 
 
   <li class="md-nav__item">
-    <a href="https://stackoverflow.com/questions/tagged/okhttp?sort=active" title="Stack Overflow" class="md-nav__link">
-      Stack Overflow
+    <a href="../upgrading_to_okhttp_4/" title="Upgrading to OkHttp 4" class="md-nav__link">
+      Upgrading to OkHttp 4
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-14" type="checkbox" id="nav-14">
+    
+    <label class="md-nav__link" for="nav-14">
+      4.x API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-14">
+        4.x API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp/okhttp3/" title="okhttp" class="md-nav__link">
+      okhttp
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-brotli/okhttp3.brotli/" title="brotli" class="md-nav__link">
+      brotli
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-dnsoverhttps/okhttp3.dnsoverhttps/" title="dnsoverhttps" class="md-nav__link">
+      dnsoverhttps
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-logging-interceptor/okhttp3.logging/" title="logging-interceptor" class="md-nav__link">
+      logging-interceptor
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-sse/okhttp3.sse/" title="sse" class="md-nav__link">
+      sse
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-tls/okhttp3.tls/" title="tls" class="md-nav__link">
+      tls
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/okhttp-urlconnection/okhttp3/" title="urlconnection" class="md-nav__link">
+      urlconnection
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../4.x/mockwebserver/okhttp3.mockwebserver/" title="mockwebserver" class="md-nav__link">
+      mockwebserver
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-toggle md-nav__toggle" data-md-toggle="nav-15" type="checkbox" id="nav-15">
+    
+    <label class="md-nav__link" for="nav-15">
+      3.12.x API
+    </label>
+    <nav class="md-nav" data-md-component="collapsible" data-md-level="1">
+      <label class="md-nav__title" for="nav-15">
+        3.12.x API
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp/" title="okhttp ⏏" class="md-nav__link">
+      okhttp ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-dnsoverhttps/" title="dnsoverhttps ⏏" class="md-nav__link">
+      dnsoverhttps ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/logging-interceptor/" title="logging-interceptor ⏏" class="md-nav__link">
+      logging-interceptor ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-sse/" title="sse ⏏" class="md-nav__link">
+      sse ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-tls/" title="tls ⏏" class="md-nav__link">
+      tls ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/okhttp-urlconnection/" title="urlconnection ⏏" class="md-nav__link">
+      urlconnection ⏏
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="https://square.github.io/okhttp/3.x/mockwebserver/" title="mockwebserver ⏏" class="md-nav__link">
+      mockwebserver ⏏
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../changelog/" title="Change Log" class="md-nav__link">
+      Change Log
     </a>
   </li>
 
@@ -431,8 +685,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../api/okhttp/okhttp3/" title="API Docs" class="md-nav__link">
-      API Docs
+    <a href="../contributing/" title="Contributing" class="md-nav__link">
+      Contributing
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../code_of_conduct/" title="Code of Conduct" class="md-nav__link">
+      Code of Conduct
     </a>
   </li>
 
@@ -458,28 +724,28 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#urls" title="URLs" class="md-nav__link">
+  <a href="#urls" class="md-nav__link">
     URLs
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#addresses" title="Addresses" class="md-nav__link">
+  <a href="#addresses" class="md-nav__link">
     Addresses
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#routes" title="Routes" class="md-nav__link">
+  <a href="#routes" class="md-nav__link">
     Routes
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#connections_1" title="Connections" class="md-nav__link">
+  <a href="#connections_1" class="md-nav__link">
     Connections
   </a>
   
@@ -506,7 +772,7 @@
                 
                 <h1 id="connections">Connections<a class="headerlink" href="#connections" title="Permanent link">&para;</a></h1>
 <p>Although you provide only the URL, OkHttp plans its connection to your webserver using three types: URL, Address, and Route.</p>
-<h4 id="urls"><a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/HttpUrl.html">URLs</a><a class="headerlink" href="#urls" title="Permanent link">&para;</a></h4>
+<h3 id="urls"><a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-http-url/">URLs</a><a class="headerlink" href="#urls" title="Permanent link">&para;</a></h3>
 <p>URLs (like <code>https://github.com/square/okhttp</code>) are fundamental to HTTP and the Internet. In addition to being a universal, decentralized naming scheme for everything on the web, they also specify how to access web resources.</p>
 <p>URLs are abstract:</p>
 <ul>
@@ -514,14 +780,14 @@
 <li>They don&rsquo;t specify whether a specific proxy server should be used or how to authenticate with that proxy server.</li>
 </ul>
 <p>They&rsquo;re also concrete: each URL identifies a specific path (like <code>/square/okhttp</code>) and query (like <code>?q=sharks&amp;lang=en</code>). Each webserver hosts many URLs.</p>
-<h4 id="addresses"><a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/Address.html">Addresses</a><a class="headerlink" href="#addresses" title="Permanent link">&para;</a></h4>
+<h3 id="addresses"><a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-address/">Addresses</a><a class="headerlink" href="#addresses" title="Permanent link">&para;</a></h3>
 <p>Addresses specify a webserver (like <code>github.com</code>) and all of the <strong>static</strong> configuration necessary to connect to that server: the port number, HTTPS settings, and preferred network protocols (like HTTP/2 or SPDY).</p>
-<p>URLs that share the same address may also share the same underlying TCP socket connection. Sharing a connection has substantial performance benefits: lower latency, higher throughput (due to <a href="http://www.igvita.com/2011/10/20/faster-web-vs-tcp-slow-start/">TCP slow start</a>) and conserved battery. OkHttp uses a <a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/ConnectionPool.html">ConnectionPool</a> that automatically reuses HTTP/1.x connections and multiplexes HTTP/2 and SPDY connections.</p>
-<p>In OkHttp some fields of the address come from the URL (scheme, hostname, port) and the rest come from the <a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/OkHttpClient.html">OkHttpClient</a>.</p>
-<h4 id="routes"><a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/Route.html">Routes</a><a class="headerlink" href="#routes" title="Permanent link">&para;</a></h4>
+<p>URLs that share the same address may also share the same underlying TCP socket connection. Sharing a connection has substantial performance benefits: lower latency, higher throughput (due to <a href="http://www.igvita.com/2011/10/20/faster-web-vs-tcp-slow-start/">TCP slow start</a>) and conserved battery. OkHttp uses a <a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-connection-pool/">ConnectionPool</a> that automatically reuses HTTP/1.x connections and multiplexes HTTP/2 and SPDY connections.</p>
+<p>In OkHttp some fields of the address come from the URL (scheme, hostname, port) and the rest come from the <a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-ok-http-client/">OkHttpClient</a>.</p>
+<h3 id="routes"><a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-route/">Routes</a><a class="headerlink" href="#routes" title="Permanent link">&para;</a></h3>
 <p>Routes supply the <strong>dynamic</strong> information necessary to actually connect to a webserver. This is the specific IP address to attempt (as discovered by a DNS query), the exact proxy server to use (if a <a href="http://developer.android.com/reference/java/net/ProxySelector.html">ProxySelector</a> is in use), and which version of TLS to negotiate (for HTTPS connections).</p>
 <p>There may be many routes for a single address. For example, a webserver that is hosted in multiple datacenters may yield multiple IP addresses in its DNS response.</p>
-<h4 id="connections_1"><a href="http://square.github.io/okhttp/3.x/okhttp/okhttp3/Connection.html">Connections</a><a class="headerlink" href="#connections_1" title="Permanent link">&para;</a></h4>
+<h3 id="connections_1"><a href="http://square.github.io/okhttp/4.x/okhttp/okhttp3/-connection/">Connections</a><a class="headerlink" href="#connections_1" title="Permanent link">&para;</a></h3>
 <p>When you request a URL with OkHttp, here&rsquo;s what it does:</p>
 <ol>
 <li>It uses the URL and configured OkHttpClient to create an <strong>address</strong>. This address specifies how we&rsquo;ll connect to the webserver.</li>
@@ -534,6 +800,7 @@
 <p>Once the response has been received, the connection will be returned to the pool so it can be reused for a future request. Connections are evicted from the pool after a period of inactivity.</p>
                 
                   
+                
                 
               
               
@@ -552,7 +819,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../concurrency/" title="Concurrency" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../caching/" title="Caching" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -561,7 +828,7 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Concurrency
+                Caching
               </span>
             </div>
           </a>
@@ -589,7 +856,7 @@
       <div class="md-footer-copyright">
         
           <div class="md-footer-copyright__highlight">
-            Copyright &copy; 2016 Square, Inc.
+            Copyright &copy; 2019 Square, Inc.
           </div>
         
         powered by
@@ -605,7 +872,7 @@
       
     </div>
     
-      <script src="../assets/javascripts/application.245445c6.js"></script>
+      <script src="../assets/javascripts/application.808e90bb.js"></script>
       
       <script>app.initialize({version:"1.0.4",url:{base:".."}})</script>
       
