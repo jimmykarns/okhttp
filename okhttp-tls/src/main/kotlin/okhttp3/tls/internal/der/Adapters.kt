@@ -17,6 +17,7 @@ package okhttp3.tls.internal.der
 
 import java.math.BigInteger
 import java.net.ProtocolException
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -163,18 +164,22 @@ internal object Adapters {
 
   internal fun parseUtcTime(string: String): Long {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyMMddHHmmss'Z'").apply {
       timeZone = utc
       set2DigitYearStart(Date(-631152000000L)) // 1950-01-01T00:00:00Z.
     }
 
-    val parsed = dateFormat.parse(string)
-    return parsed.time
+    try {
+      val parsed = dateFormat.parse(string)
+      return parsed.time
+    } catch (e: ParseException) {
+      throw ProtocolException("Failed to parse UTCTime $string")
+    }
   }
 
   internal fun formatUtcTime(date: Long): String {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyMMddHHmmss'Z'").apply {
       timeZone = utc
       set2DigitYearStart(Date(-631152000000L)) // 1950-01-01T00:00:00Z.
     }
@@ -229,17 +234,21 @@ internal object Adapters {
 
   internal fun parseGeneralizedTime(string: String): Long {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyyyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyyyMMddHHmmss'Z'").apply {
       timeZone = utc
     }
 
-    val parsed = dateFormat.parse(string)
-    return parsed.time
+    try {
+      val parsed = dateFormat.parse(string)
+      return parsed.time
+    } catch (e: ParseException) {
+      throw ProtocolException("Failed to parse GeneralizedTime $string")
+    }
   }
 
   internal fun formatGeneralizedTime(date: Long): String {
     val utc = TimeZone.getTimeZone("GMT")
-    val dateFormat = SimpleDateFormat("yyyyMMddHHmmssXX").apply {
+    val dateFormat = SimpleDateFormat("yyyyMMddHHmmss'Z'").apply {
       timeZone = utc
     }
 
@@ -415,7 +424,18 @@ internal object Adapters {
           }
         }
 
-        throw ProtocolException("expected any but was $peekedHeader at $reader")
+
+        reader.read("ANY") { header ->
+          val bytes = reader.readUnknown()
+          return AnyValue(
+              tagClass = header.tagClass,
+              tag = header.tag,
+              constructed = header.constructed,
+              length = header.length,
+              bytes = bytes
+          )
+        }
+
       }
     }
   }

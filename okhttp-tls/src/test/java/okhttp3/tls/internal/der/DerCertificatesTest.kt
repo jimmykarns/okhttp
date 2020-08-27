@@ -19,6 +19,7 @@ import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
+
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -30,6 +31,7 @@ import okhttp3.tls.internal.der.ObjectIdentifiers.organizationalUnitName
 import okhttp3.tls.internal.der.ObjectIdentifiers.rsaEncryption
 import okhttp3.tls.internal.der.ObjectIdentifiers.sha256WithRSAEncryption
 import okhttp3.tls.internal.der.ObjectIdentifiers.subjectAlternativeName
+
 import okio.Buffer
 import okio.ByteString
 import okio.ByteString.Companion.decodeBase64
@@ -643,16 +645,20 @@ internal class DerCertificatesTest {
         .fromDer(certificateByteString)
 
     assertThat(okHttpCertificate.basicConstraints).isEqualTo(Extension(
-        id = basicConstraints,
+
+        extnID = ObjectIdentifiers.basicConstraints,
+
         critical = true,
         value = BasicConstraints(true, 3)
     ))
     assertThat(okHttpCertificate.commonName).isEqualTo("Jurassic Park")
     assertThat(okHttpCertificate.organizationalUnitName).isEqualTo("Gene Research")
     assertThat(okHttpCertificate.subjectAlternativeNames).isEqualTo(Extension(
-        id = subjectAlternativeName,
+
+        extnID = ObjectIdentifiers.subjectAlternativeName,
         critical = true,
-        value = listOf(
+        extnValue = listOf(
+
             CertificateAdapters.generalNameDnsName to "*.example.com",
             CertificateAdapters.generalNameDnsName to "www.example.org"
         )
@@ -662,6 +668,7 @@ internal class DerCertificatesTest {
   }
 
   @Test
+
   fun `public key`() {
     val publicKeyBytes = ("MIGJAoGBAICkUeG2stqfbyr6gyiVm5pN9YEDRXlowi+rfYGyWhC7ouW9fXAnhgShQKMOU8" +
         "62mG3tcttSYGdsjM3z1crhQlUzpKqncrzwqbzPuAyt2t9Oib/bvjAvbl8gJH7IMRDl9RVgGYkApdkXVqgjSYigTH" +
@@ -678,7 +685,9 @@ internal class DerCertificatesTest {
         "mIE65swMM5/RNhS4aFjez/MwxFNOHaxc9VgCwYPXCLOtdf7AVovdyG0XWgbUXH+NyxKwboE").decodeBase64()!!
 
     val x509PublicKey = encodeKey(
-        algorithm = rsaEncryption,
+
+        algorithm = "1.2.840.113549.1.1.1",
+
         publicKeyBytes = publicKeyBytes
     )
     val keyFactory = KeyFactory.getInstance("RSA")
@@ -697,6 +706,7 @@ internal class DerCertificatesTest {
     assertThat(okHttpCertificate.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey)
         .isEqualTo(BitString(publicKeyBytes, 0))
   }
+
 
   @Test fun `time before 2050 uses UTC_TIME`() {
     val utcTimeDer = "170d3439313233313233353935395a".decodeHex()
@@ -729,11 +739,22 @@ internal class DerCertificatesTest {
     assertThat(decoded).isEqualTo(date("2049-12-31T23:59:59.000+0000").time)
   }
 
+  @Test fun `time before 1950 uses GENERALIZED_TIME`() {
+    val generalizedTimeDer = "180f31393439313233313233353935395a".decodeHex()
+
+    val decoded = CertificateAdapters.time.fromDer(generalizedTimeDer)
+    val encoded = CertificateAdapters.time.toDer(decoded)
+
+    assertThat(decoded).isEqualTo(date("1949-12-31T23:59:59.000+0000").time)
+    assertThat(encoded).isEqualTo(generalizedTimeDer)
+  }
+
   @Test
   fun `reencode golden EC certificate`() {
     val certificateByteString = ("MIIBkjCCATmgAwIBAgIBETAKBggqhkjOPQQDAjAwMRYwFAYDVQQLDA1HZW5lIFJ" +
         "lc2VhcmNoMRYwFAYDVQQDDA1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlowMDE" +
         "WMBQGA1UECwwNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAwwNSnVyYXNzaWMgUGFyazBZMBMGByqGSM49AgEGCCqGSM4" +
+
         "9AwEHA0IABKzhiMzpN+BkUSPLIKItu6O2iao2Pd7dxrvPdIs4xv9/2tPCVgUxevZ27qRcqZOnSd31ZP6B04vkXag" +
         "/awy2/iujRDBCMBIGA1UdEwEB/wQIMAYBAf8CAQMwLAYDVR0RAQH/BCIwIIINKi5leGFtcGxlLmNvbYIPd3d3LmV" +
         "4YW1wbGUub3JnMAoGCCqGSM49BAMCA0cAMEQCIHzutN/uzViLBXZ0slMqO5oz7ghgBgDbgo2ZyroVeQ/KAiB6Vqo" +
@@ -747,6 +768,7 @@ internal class DerCertificatesTest {
 
   @Test
   fun `reencode golden RSA certificate`() {
+
     val certificateByteString = ("MIIDHzCCAgegAwIBAgIBETANBgkqhkiG9w0BAQsFADAwMRYwFAYDVQQLDA1HZW5" +
         "lIFJlc2VhcmNoMRYwFAYDVQQDDA1KdXJhc3NpYyBQYXJrMB4XDTY5MTIzMTIzNTk1OVoXDTcwMDEwMTAwMDAwMlo" +
         "wMDEWMBQGA1UECwwNR2VuZSBSZXNlYXJjaDEWMBQGA1UEAwwNSnVyYXNzaWMgUGFyazCCASIwDQYJKoZIhvcNAQE" +
@@ -768,6 +790,7 @@ internal class DerCertificatesTest {
   }
 
   @Test
+
   fun `private key info`() {
     val privateKeyInfoByteString = ("MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAICkUeG2stqf" +
         "byr6gyiVm5pN9YEDRXlowi+rfYGyWhC7ouW9fXAnhgShQKMOU862mG3tcttSYGdsjM3z1crhQlUzpKqncrzwqbzP" +
@@ -791,7 +814,6 @@ internal class DerCertificatesTest {
     assertThat(encoded).isEqualTo(privateKeyInfoByteString)
   }
 
-  @Test
   fun `RSA issuer and signature`() {
     val root = HeldCertificate.Builder()
         .certificateAuthority(0)
@@ -852,49 +874,6 @@ internal class DerCertificatesTest {
     assertThat(okHttpCertificate.checkSignature(certificate.keyPair.public)).isFalse()
   }
 
-  /**
-   * We don't have API support for rfc822Name values (email addresses) in the subject alternative
-   * name, but we don't crash either.
-   */
-  @Test
-  fun `unsupported general name tag`() {
-    val certificateByteString = ("MIIFEDCCA/igAwIBAgIRAJK4dE9xztDibHKj2NXZJbIwDQYJKoZIhvcNAQELBQA" +
-        "wSDELMAkGA1UEBhMCVVMxIDAeBgNVBAoTF1NlY3VyZVRydXN0IENvcnBvcmF0aW9uMRcwFQYDVQQDEw5TZWN1cmV" +
-        "UcnVzdCBDQTAeFw0xNjA5MDExNDM1MzVaFw0yNDA5MjkxNDM1MzVaMIG1MQswCQYDVQQGEwJVUzERMA8GA1UECBM" +
-        "ISWxsaW5vaXMxEDAOBgNVBAcTB0NoaWNhZ28xITAfBgNVBAoTGFRydXN0d2F2ZSBIb2xkaW5ncywgSW5jLjE9MDs" +
-        "GA1UEAxM0VHJ1c3R3YXZlIE9yZ2FuaXphdGlvbiBWYWxpZGF0aW9uIFNIQTI1NiBDQSwgTGV2ZWwgMTEfMB0GCSq" +
-        "GSIb3DQEJARYQY2FAdHJ1c3R3YXZlLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAOPTqIZSRwS" +
-        "f47okE5omzktvKR7wgqdWzznOnpUOtgwmBPwNeCV1LSPMmlHPZxY4enTc0eyoxTxKv6g6ZUJe39U74eYnwTTT9sE" +
-        "OnvNtE1pTzuB4Uf+YOPt4hZidTe5Ba8Q6dfz/Ht/vZXCbF3JFwrXxZEPbJaICap2grIqYHax+IEIYnBQC+WKh8Ng" +
-        "Cn3LWS0j6cYSN8SEjFf5SEMGT1iNtttb/QC3JKJIeaVunUyvMfMjVFMntc7eZrFs6rp3wY1WFVI+fy17uOoUvfTH" +
-        "8bvNAESUch7FyLh2zM8FVxqilT2XygHRwZeXtxJQozcDcvh4ItPb0uz6AFIYwn/8Gzp0CAwEAAaOCAYUwggGBMBI" +
-        "GA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFMrOHRgDdx4c83xYsppwqAiAFvSuMA4GA1UdDwEB/wQEAwIBhjA" +
-        "yBgNVHR8EKzApMCegJaAjhiFodHRwOi8vY3JsLnRydXN0d2F2ZS5jb20vU1RDQS5jcmwwPQYDVR0gBDYwNDAyBgR" +
-        "VHSAAMCowKAYIKwYBBQUHAgEWHGh0dHBzOi8vc3NsLnRydXN0d2F2ZS5jb20vQ0EwbAYIKwYBBQUHAQEEYDBeMCU" +
-        "GCCsGAQUFBzABhhlodHRwOi8vb2NzcC50cnVzdHdhdmUuY29tMDUGCCsGAQUFBzAChilodHRwOi8vc3NsLnRydXN" +
-        "0d2F2ZS5jb20vaXNzdWVycy9TVENBLmNydDAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYBBQUHAwEwHwYDVR0jBBg" +
-        "wFoAUQjK2FvoE/f5dS3rD/fdMQB1aQ68wGwYDVR0RBBQwEoEQY2FAdHJ1c3R3YXZlLmNvbTANBgkqhkiG9w0BAQs" +
-        "FAAOCAQEAC0OvN7/UJBcRDXchA4b2qJo7mBD05+XR96N7vucMaanz26CnUxs1o8DcBckpqyEXCxdOanIr+/UJNbB" +
-        "LXLJCzNLJEJcgV9TjbVu33eQR23yMuXD+cZsqLMF+L5IIM47W8dlwKJvMy0xs7Jb1S3NOIhcoVu+XPzRsgKv8Yi2" +
-        "B6l278RfzegiCx4vYJv0pBjFzizEiFH9bWTYIOlIJJSM57hoICgjCTS8BoEgndwWIyc/nEmlYaUwmCo9QynY+UmW" +
-        "1WPWmVITEJPMdMK6AZqvvaWmuHJ6/vURaz+Hoc5D3z0yJDDCkv52bXV04ZoF6cbcWry7JvNA+djvay/4BRR4SZQ==")
-        .decodeBase64()!!
-
-    val decoded = CertificateAdapters.certificate.fromDer(certificateByteString)
-    assertThat(decoded.subjectAlternativeNames).isEqualTo(Extension(
-        id = subjectAlternativeName,
-        critical = false,
-        value = listOf(
-            Adapters.ANY_VALUE to AnyValue(
-                tagClass = DerHeader.TAG_CLASS_CONTEXT_SPECIFIC,
-                tag = 1L,
-                constructed = false,
-                length = 16,
-                bytes = "ca@trustwave.com".encodeUtf8()
-            )
-        )
-    ))
-  }
 
   /** Converts public key bytes to SubjectPublicKeyInfo bytes. */
   private fun encodeKey(algorithm: String, publicKeyBytes: ByteString): ByteString {
@@ -911,6 +890,7 @@ internal class DerCertificatesTest {
         .write(this, 0, size - 1)
         .writeByte(this[size - 1].toInt() xor 1)
         .readByteString()
+
   }
 
   private fun date(s: String): Date {
@@ -918,5 +898,6 @@ internal class DerCertificatesTest {
       timeZone = TimeZone.getTimeZone("GMT")
       parse(s)
     }
+
   }
 }

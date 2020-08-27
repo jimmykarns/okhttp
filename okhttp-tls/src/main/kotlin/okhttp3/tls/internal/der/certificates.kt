@@ -23,7 +23,7 @@ import java.security.SignatureException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import okio.Buffer
-import okio.ByteString
+
 
 internal data class Certificate(
   val tbsCertificate: TbsCertificate,
@@ -46,17 +46,21 @@ internal data class Certificate(
           ?.value
     }
 
+
   val subjectAlternativeNames: Extension
     get() {
       return tbsCertificate.extensions.first {
-        it.id == ObjectIdentifiers.subjectAlternativeName
+        it.extnID == ObjectIdentifiers.subjectAlternativeName
+
       }
     }
 
   val basicConstraints: Extension
     get() {
       return tbsCertificate.extensions.first {
-        it.id == ObjectIdentifiers.basicConstraints
+
+        it.extnID == ObjectIdentifiers.basicConstraints
+
       }
     }
 
@@ -65,11 +69,12 @@ internal data class Certificate(
   fun checkSignature(issuer: PublicKey): Boolean {
     val signedData = CertificateAdapters.tbsCertificate.toDer(tbsCertificate)
 
-    return Signature.getInstance(tbsCertificate.signatureAlgorithmName).run {
-      initVerify(issuer)
-      update(signedData.toByteArray())
-      verify(signatureValue.byteString.toByteArray())
-    }
+
+    val signature = Signature.getInstance(tbsCertificate.signatureAlgorithmName)
+    signature.initVerify(issuer)
+    signature.update(signedData.toByteArray())
+    return signature.verify(signatureValue.byteString.toByteArray())
+
   }
 
   fun toX509Certificate(): X509Certificate {
