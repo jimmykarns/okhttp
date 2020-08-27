@@ -15,10 +15,9 @@
  */
 package okhttp3.tls.internal.der
 
-import java.math.BigInteger
-
-import java.net.ProtocolException
 import okio.ByteString
+import okio.IOException
+import java.math.BigInteger
 
 
 /**
@@ -207,6 +206,7 @@ internal object CertificateAdapters {
     when (typeHint) {
       ObjectIdentifiers.subjectAlternativeName -> subjectAlternativeName
       ObjectIdentifiers.basicConstraints -> basicConstraints
+      AttestationAdapters.KEY_DESCRIPTION_OID -> AttestationAdapters.keyDescription
       else -> null
     }
   }.withExplicitBox(
