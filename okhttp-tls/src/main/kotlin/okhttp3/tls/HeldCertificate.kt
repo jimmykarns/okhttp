@@ -55,8 +55,6 @@ import okio.ByteString
 import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.toByteString
 
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
-
 
 /**
  * A certificate and its private key. These are some properties of certificates that are used with
